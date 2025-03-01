@@ -4,8 +4,11 @@ const bodyParser = require('body-parser');
 require('dotenv').config();
 const cookieParser = require('cookie-parser');
 const app = express();
+const cors = require('cors');
 app.use(bodyParser.json());
 // const router = express.Router();
+
+const allowedOrigins = ['https://txtwise.io', 'http://localhost:3000'];
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB, { useNewUrlParser: true, useUnifiedTopology: true })
