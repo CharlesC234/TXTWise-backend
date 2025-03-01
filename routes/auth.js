@@ -6,11 +6,41 @@ require('dotenv').config();
 const { verifyToken } = require('../functions/verifyToken');
 const generateToken = require('../functions/generateToken');
 const User = require('../models/user');
+const jwt = require('jsonwebtoken');
 
  // Twilio setup
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-// Step 1: Create Portrait (Display Name & Phone Number)
+router.get('/validate', async (req, res) => {
+  try {
+      const token = req.cookies.token; // Extract token from HTTP-only cookie
+
+      if (!token) {
+          return res.status(401).json({ message: 'Unauthorized: No token provided' });
+      }
+
+      // Verify JWT
+      jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+          if (err) {
+              return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+          }
+
+          // Find user based on decoded phone number
+          const user = await User.findOne({ phoneNumber: decoded.phoneNumber });
+          if (!user) {
+              return res.status(401).json({ message: 'Unauthorized: User not found' });
+          }
+
+          res.status(200).json({ authenticated: true, user });
+      });
+  } catch (error) {
+      console.error('Error validating JWT:', error);
+      res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+
+
 router.post(
     '/send', async function (req, res){
       const { phoneNumber } = req.body;
