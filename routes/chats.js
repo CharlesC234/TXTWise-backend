@@ -4,8 +4,10 @@ const mongoose = require('mongoose');
 const Conversation = require('../models/conversation');
 const User = require('../models/user');
 const Message = require('../models/message');
+const twilio = require('twilio');
 require('dotenv').config();
 const { verifyToken } = require('../functions/verifyToken');
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 
 /**
@@ -25,27 +27,71 @@ router.get('/:id', verifyToken, async function (req, res){
 /**
  * CREATE a new conversation
  */
-router.post('/', verifyToken, async function (req, res){
-  const { userId, LLM } = req.body;
+router.post('/', verifyToken, async (req, res) => {
+    try {
+      const { phoneNumber, LLM, initialPrompt } = req.body;
+  
+      if (!phoneNumber || !LLM) {
+        return res.status(400).json({ error: "Missing required fields: phoneNumber, LLM" });
+      }
 
-  // Create new conversation
-  const conversation = new Conversation({
-    user: userId,
-    llm: LLM,
-    messages: [],
-  });
+      // Find user by phone number
+      const user = await User.findOne({ phoneNumber });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
 
-  // Save conversation
-  const savedConversation = await conversation.save();
+      const userId = user._id;
+  
+      // Create a new conversation
+      const conversation = new Conversation({
+        user: userId,
+        llm: LLM.toLowerCase(),
+        initialPrompt: initialPrompt || "", // Save only if provided
+        messages: [],
+      });
+  
+      // Save conversation to DB
+      const savedConversation = await conversation.save();
+  
+      // Link conversation to user
+      await User.updateOne(
+        { _id: userId },
+        { $push: { conversations: savedConversation._id } }
+      );
 
-  // Link conversation to users
-  await User.updateMany(
-    { _id: { $in: userId } },
-    { $push: { conversations: savedConversation._id } }
-  );
+      // **Send a Welcome Message via Twilio**
+      const welcomeMessage = `
+        Welcome to TXTWise! 🎉
+        
+        You are now chatting with ${LLM}. To start, just send a message.
 
-  res.status(201).json(savedConversation);
+        📌 *How to use this chat*:
+        - Send any message to start the conversation.
+        - If you provided an initial prompt, the chatbot will respond accordingly.
+        - Switch models at any time by typing: "CHATGPT", "GROK", "GEMINI", "DEEPSEEK", or "CLAUDE"
+
+        ❌ To opt out, reply with *STOP*.
+        🔄 To restart a chat, reply with *RESET*.
+        🛠️ Need help? Reply with *HELP*.
+
+        Happy chatting!
+      `;
+
+      await twilioClient.messages.create({
+        body: welcomeMessage,
+        from: process.env.TWILIO_PHONE_NUMBER, // Your Twilio phone number
+        to: phoneNumber
+      });
+
+      res.status(201).json(savedConversation);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
 });
+
+
 
 /**
  * PAUSE a conversation (add paused flag)

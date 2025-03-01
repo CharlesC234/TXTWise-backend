@@ -41,6 +41,21 @@ router.post('/webhook', async (req, res) => {
 
   console.log(`Incoming message from ${from} to ${to}: ${incomingMessage}`);
 
+      // Check if the sender is a registered user
+      const user = await User.findOne({ phoneNumber: from });
+
+      if (!user) {
+        console.log(`Unauthorized number: ${from}. Sending registration link.`);
+        
+        await twilioClient.messages.create({
+          body: "You are not registered. Please create an account at https://txtwise.io to use this service.",
+          from: to,
+          to: from,
+        });
+  
+        return res.status(200).send('<Response></Response>'); // Stop further processing
+      }
+
   // Enqueue the message to respect rate limits
   messageQueue.add({
     from,
@@ -79,6 +94,7 @@ messageQueue.process(async (job) => {
       messageBody: incomingMessage,
       isAI: false,
     });
+
 
     conversation.messages.push(userMessage._id);
     await conversation.save();
