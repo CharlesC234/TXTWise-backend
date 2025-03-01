@@ -22,12 +22,13 @@ const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_A
 const messageQueue = new Queue('smsQueue', process.env.REDIS_URL);
 
 // AI Model Mapping
+//replace with TWILIO_PHONE_{num}
 const AI_MAP = {
-  [process.env.TWILIO_PHONE_1]: { name: 'Claude', apiKey: process.env.CLAUDE_API_KEY, url: 'https://api.claude.ai' },
-  [process.env.TWILIO_PHONE_2]: { name: 'ChatGPT', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
-  [process.env.TWILIO_PHONE_3]: { name: 'Deepseek', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1' },
-  [process.env.TWILIO_PHONE_4]: { name: 'Gemini', apiKey: process.env.GEMINI_API_KEY, url: 'https://api.gemini.com/v1' },
-  [process.env.TWILIO_PHONE_5]: { name: 'Grok', apiKey: process.env.GROK_API_KEY, url: 'https://api.grok.com/v1' },
+  [process.env.TWILIO_PHONE_NUMBER]: { name: 'Claude', apiKey: process.env.CLAUDE_API_KEY, url: 'https://api.claude.ai' },
+  [process.env.TWILIO_PHONE_NUMBER]: { name: 'ChatGPT', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
+  [process.env.TWILIO_PHONE_NUMBER]: { name: 'Deepseek', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1' },
+  [process.env.TWILIO_PHONE_NUMBER]: { name: 'Gemini', apiKey: process.env.GEMINI_API_KEY, url: 'https://api.gemini.com/v1' },
+  [process.env.TWILIO_PHONE_NUMBER]: { name: 'Grok', apiKey: process.env.GROK_API_KEY, url: 'https://api.grok.com/v1' },
 };
 
 // Middleware: Parse URL-encoded Twilio data
