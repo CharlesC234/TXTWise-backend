@@ -123,7 +123,7 @@ router.post(
           });
 
           // Send response with token
-          res.status(200).json({ message: 'Phone number verified successfully.', token });
+          res.status(200).json({ message: 'Phone number verified successfully.'});
         } catch (error) {
           console.error('Error verifying phone number:', error);
           res.status(500).json({ message: 'Internal server error' });
