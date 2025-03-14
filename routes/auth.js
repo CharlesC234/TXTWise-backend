@@ -10,7 +10,7 @@ const jwt = require('jsonwebtoken');
 const sendSms = require('../functions/sendSMS');
 
 
-router.post('/validate', async (req, res) => {
+router.get('/validate', async (req, res) => {
   try {
       const token = req.cookies.token; // Extract token from HTTP-only cookie
 
@@ -118,14 +118,13 @@ router.post(
           // Set JWT in HTTP-Only Cookie
           res.cookie('token', token, {
             httpOnly: true,
-            secure: false,
+            secure: true,
             sameSite: 'None',
-            path: '/',       // Allow all paths
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
           });
 
           // Send response with token
-          res.status(200).json({ message: 'Phone number verified successfully.'});
+          res.status(200).json({ message: 'Phone number verified successfully.', token });
         } catch (error) {
           console.error('Error verifying phone number:', error);
           res.status(500).json({ message: 'Internal server error' });
