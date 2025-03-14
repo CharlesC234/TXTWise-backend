@@ -7,9 +7,15 @@ const { verifyToken } = require('../functions/verifyToken');
 const generateToken = require('../functions/generateToken');
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
+const signalwire = require('@signalwire/realtime-api');
 
- // Twilio setup
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+// SignalWire Client
+const signalwireClient = new signalwire.RestClient(
+  process.env.SIGNALWIRE_PROJECT_ID,
+  process.env.SIGNALWIRE_API_TOKEN,
+  { signalwireSpaceUrl: process.env.SIGNALWIRE_SPACE_URL }
+);
+
 
 router.get('/validate', async (req, res) => {
   try {
@@ -56,9 +62,9 @@ router.post(
       await tempClient.saveTemporarySignupData(phoneNumber, verificationCode);
   
       // Send SMS using Twilio
-      await client.messages.create({
+      await signalwireClient.messages.create({
         body: `Your TXTWise verification code is: ${verificationCode}`,
-        from: process.env.TWILIO_PHONE_NUMBER,
+        from: process.env.SIGNALWIRE_PHONE_NUMBER,
         to: phoneNumber,
       });
   

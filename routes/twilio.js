@@ -4,6 +4,8 @@ const axios = require('axios');
 const twilio = require('twilio');
 const Queue = require('bull');
 const Redis = require('ioredis');
+const signalwire = require('@signalwire/realtime-api');
+
 require('dotenv').config();
 
 const Conversation = require('../models/conversation');
@@ -12,8 +14,13 @@ const User = require('../models/user');
 
 const router = express.Router();
 
-// Twilio Client
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+// SignalWire Client
+const signalwireClient = new signalwire.RestClient(
+    process.env.SIGNALWIRE_PROJECT_ID,
+    process.env.SIGNALWIRE_API_TOKEN,
+    { signalwireSpaceUrl: process.env.SIGNALWIRE_SPACE_URL }
+  );
+  
 
 // Redis Connection for Bull Queue
 // const redisClient = new Redis(process.env.REDIS_URL);
@@ -24,11 +31,11 @@ const messageQueue = new Queue('smsQueue', process.env.REDIS_URL);
 // AI Model Mapping
 //replace with TWILIO_PHONE_{num}
 const AI_MAP = {
-  [process.env.TWILIO_PHONE_NUMBER]: { name: 'Claude', apiKey: process.env.CLAUDE_API_KEY, url: 'https://api.claude.ai' },
-  [process.env.TWILIO_PHONE_NUMBER]: { name: 'ChatGPT', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
-  [process.env.TWILIO_PHONE_NUMBER]: { name: 'Deepseek', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1' },
-  [process.env.TWILIO_PHONE_NUMBER]: { name: 'Gemini', apiKey: process.env.GEMINI_API_KEY, url: 'https://api.gemini.com/v1' },
-  [process.env.TWILIO_PHONE_NUMBER]: { name: 'Grok', apiKey: process.env.GROK_API_KEY, url: 'https://api.grok.com/v1' },
+  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'Claude', apiKey: process.env.CLAUDE_API_KEY, url: 'https://api.claude.ai' },
+  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'ChatGPT', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
+  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'Deepseek', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1' },
+  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'Gemini', apiKey: process.env.GEMINI_API_KEY, url: 'https://api.gemini.com/v1' },
+  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'Grok', apiKey: process.env.GROK_API_KEY, url: 'https://api.grok.com/v1' },
 };
 
 // Middleware: Parse URL-encoded Twilio data
@@ -140,7 +147,7 @@ messageQueue.process(async (job) => {
     await conversation.save();
 
     // Send AI Response Back via Twilio SMS
-    await twilioClient.messages.create({
+    await signalwireClient.messages.create({
       body: aiText,
       from: to,
       to: from,
@@ -151,7 +158,7 @@ messageQueue.process(async (job) => {
     console.error('Error processing SMS:', error);
 
     // Notify user of the error via SMS
-    await twilioClient.messages.create({
+    await signalwireClient.messages.create({
       body: 'Sorry, there was an issue processing your message. Please try again later.',
       from: to,
       to: from,
