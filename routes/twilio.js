@@ -46,12 +46,8 @@ router.post('/webhook', async (req, res) => {
 
       if (!user) {
         console.log(`Unauthorized number: ${from}. Sending registration link.`);
-        
-        await twilioClient.messages.create({
-          body: "You are not registered. Please create an account at https://txtwise.io/login to use this service.",
-          from: to,
-          to: from,
-        });
+
+        await sendSms("You are not registered. Please create an account at https://txtwise.io/login to use this service.", to, from);
   
         return res.status(200).send('<Response></Response>'); // Stop further processing
       }
@@ -59,12 +55,9 @@ router.post('/webhook', async (req, res) => {
 
       if (user.conversations.length <= 0) {
         console.log(`No active conversations: ${from}.`);
-        
-        await twilioClient.messages.create({
-          body: "You do not have any active conversations. Please log into your account at https://txtwise.io/login and initialize a conversation to use this service.",
-          from: to,
-          to: from,
-        });
+    
+        await sendSms("You do not have any active conversations. Please log into your account at https://txtwise.io/login and initialize a conversation to use this service.",
+         to, from);
   
         return res.status(200).send('<Response></Response>'); // Stop further processing
       }
