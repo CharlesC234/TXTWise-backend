@@ -24,17 +24,18 @@ const allowedOrigins = ['https://txtwise.io', 'http://localhost:3000'];
 app.use(
     cors({
       origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
           callback(new Error('Not allowed by CORS'));
         }
       },
       credentials: true, // Allow cookies to be sent
+      optionsSuccessStatus: 200, // Ensure preflight requests succeed
     })
   );
 
-  
+
 app.use(cookieParser());
 
 app.use(express.json());
