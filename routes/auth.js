@@ -85,7 +85,7 @@ router.post(
             return res.status(400).json({ message: 'Phone number not found or verification expired.' });
           }
 
-          if (storedData.verificationCode !== verificationCode) {
+          if (storedData.data !== verificationCode) {
             return res.status(400).json({ message: 'Invalid verification code.' });
           }
 
