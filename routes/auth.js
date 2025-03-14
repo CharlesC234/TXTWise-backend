@@ -10,13 +10,12 @@ const jwt = require('jsonwebtoken');
 const sendSms = require('../functions/sendSMS');
 
 
-router.get('/validate', async (req, res) => {
+router.post('/validate', async (req, res) => {
   try {
       const token = req.cookies.token; // Extract token from HTTP-only cookie
 
       console.log("here: " + token);
-      console.log(req.cookies);
-      console.log(req);
+      console.log("cookies: " + req.cookies);
 
       if (!token) {
           return res.status(401).json({ message: 'Unauthorized: No token provided' });
