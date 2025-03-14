@@ -1,4 +1,5 @@
 require('dotenv').config();
+const jwt = require('jsonwebtoken'); // Make sure to import jsonwebtoken
 /**
  * JWT Verification Middleware
  */
