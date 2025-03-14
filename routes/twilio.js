@@ -1,10 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const twilio = require('twilio');
 const Queue = require('bull');
 const Redis = require('ioredis');
-const signalwire = require('@signalwire/realtime-api');
+const sendSms = require('../functions/sendSMS');
+
 
 require('dotenv').config();
 
@@ -13,14 +13,6 @@ const Message = require('../models/message');
 const User = require('../models/user');
 
 const router = express.Router();
-
-// SignalWire Client
-const signalwireClient = new signalwire.RestClient(
-    process.env.SIGNALWIRE_PROJECT_ID,
-    process.env.SIGNALWIRE_API_TOKEN,
-    { signalwireSpaceUrl: process.env.SIGNALWIRE_SPACE_URL }
-  );
-  
 
 // Redis Connection for Bull Queue
 // const redisClient = new Redis(process.env.REDIS_URL);
@@ -146,24 +138,16 @@ messageQueue.process(async (job) => {
     conversation.messages.push(aiMessage._id);
     await conversation.save();
 
-    // Send AI Response Back via Twilio SMS
-    await signalwireClient.messages.create({
-      body: aiText,
-      from: to,
-      to: from,
-    });
+        // Send AI Response Back via SignalWire SMS
+        await sendSms(aiText, to, from);
 
-    console.log(`Replied to ${from} using ${aiConfig.name}: ${aiText}`);
-  } catch (error) {
-    console.error('Error processing SMS:', error);
+        console.log(`Replied to ${from} using ${aiConfig.name}: ${aiText}`);
+        } catch (error) {
+        console.error('Error processing SMS:', error);
 
-    // Notify user of the error via SMS
-    await signalwireClient.messages.create({
-      body: 'Sorry, there was an issue processing your message. Please try again later.',
-      from: to,
-      to: from,
-    });
-  }
+        // Notify user of the error via SMS
+        await sendSms('Sorry, there was an issue processing your message. Please try again later.', to, from);
+        }
 });
 
 module.exports = router;

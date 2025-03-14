@@ -7,14 +7,7 @@ const { verifyToken } = require('../functions/verifyToken');
 const generateToken = require('../functions/generateToken');
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
-const signalwire = require('@signalwire/realtime-api');
-
-// SignalWire Client
-const signalwireClient = new signalwire.RestClient(
-  process.env.SIGNALWIRE_PROJECT_ID,
-  process.env.SIGNALWIRE_API_TOKEN,
-  { signalwireSpaceUrl: process.env.SIGNALWIRE_SPACE_URL }
-);
+const sendSms = require('../functions/sendSMS');
 
 
 router.get('/validate', async (req, res) => {
@@ -61,12 +54,15 @@ router.post(
       // Save phone number and verification code temporarily in Redis
       await tempClient.saveTemporarySignupData(phoneNumber, verificationCode);
   
-      // Send SMS using Twilio
-      await signalwireClient.messages.create({
-        body: `Your TXTWise verification code is: ${verificationCode}`,
-        from: process.env.SIGNALWIRE_PHONE_NUMBER,
-        to: phoneNumber,
-      });
+      const response = await sendSms(
+        `Your TXTWise verification code is: ${verificationCode}`,
+        process.env.SIGNALWIRE_PHONE_NUMBER,
+        phoneNumber
+      );
+    
+      if (!response.success) {
+        return res.status(500).json({ message: response.message });
+      }
   
       res.status(200).json({ message: 'Verification code sent to phone number.' });
     
