@@ -9,7 +9,7 @@ require('dotenv').config();
  * @returns {Promise<object>} - API response or error
  */
 async function sendSms(body, from, to) {
-  const signalwireUrl = `https://${process.env.SIGNALWIRE_SPACE_URL}/api/laml/2010-04-01/Accounts/${process.env.SIGNALWIRE_PROJECT_ID}/Messages.json`;
+  const signalwireUrl = `${process.env.SIGNALWIRE_SPACE_URL}/api/laml/2010-04-01/Accounts/${process.env.SIGNALWIRE_PROJECT_ID}/Messages.json`;
 
   const authHeader = `Basic ${Buffer.from(`${process.env.SIGNALWIRE_PROJECT_ID}:${process.env.SIGNALWIRE_API_TOKEN}`).toString('base64')}`;
 
