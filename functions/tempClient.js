@@ -1,9 +1,8 @@
-const TemporaryPortrait = require('../models/temp');
+const Temps = require('../models/temp');
 require('dotenv').config();
-
 // Save temporary signup data
 const saveTemporarySignupData = async (signupToken, data) => {
-  const existing = await TemporaryPortrait.findOne({ signupToken });
+  const existing = await Temps.findOne({ signupToken });
   if (existing) {
     // Update existing record
     existing.data = data;
@@ -11,20 +10,20 @@ const saveTemporarySignupData = async (signupToken, data) => {
     await existing.save();
   } else {
     // Create new record
-    const tempPortrait = new TemporaryPortrait({ signupToken, data });
-    await tempPortrait.save();
+    const temp = new Temps({ signupToken, data });
+    await temp.save();
   }
 };
 
 // Retrieve temporary signup data
 const getTemporarySignupData = async (signupToken) => {
-  const record = await TemporaryPortrait.findOne({ signupToken });
+  const record = await Temps.findOne({ signupToken });
   return record ? record.data : null;
 };
 
 // Delete temporary signup data
 const deleteTemporarySignupData = async (signupToken) => {
-  await TemporaryPortrait.deleteOne({ signupToken });
+  await Temps.deleteOne({ signupToken });
 };
 
 module.exports = {
