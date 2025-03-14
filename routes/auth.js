@@ -25,7 +25,7 @@ router.get('/validate', async (req, res) => {
           }
 
           // Find user based on decoded phone number
-          const user = await User.findOne({ phoneNumber: decoded.phoneNumber });
+          const user = await User.findOne({ phoneNumber: decoded.id });
           if (!user) {
               return res.status(401).json({ message: 'Unauthorized: User not found' });
           }
