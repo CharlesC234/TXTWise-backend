@@ -15,6 +15,7 @@ router.get('/validate', async (req, res) => {
       const token = req.cookies.token; // Extract token from HTTP-only cookie
 
       console.log("here: " + token);
+      console.log("HELLOWORLD");
       console.log("cookies: " + req.cookies);
 
       if (!token) {
