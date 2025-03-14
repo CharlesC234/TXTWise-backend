@@ -10,7 +10,7 @@ const jwt = require('jsonwebtoken');
 const sendSms = require('../functions/sendSMS');
 
 
-router.get('/validate', async (req, res) => {
+router.post('/validate', async (req, res) => {
   try {
       const token = req.cookies.token; // Extract token from HTTP-only cookie
 
