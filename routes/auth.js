@@ -4,7 +4,7 @@ const tempClient = require('../functions/tempClient'); // Redis utility function
 const twilio = require('twilio');
 require('dotenv').config();
 const { verifyToken } = require('../functions/verifyToken');
-const generateToken = require('../functions/generateToken');
+const { generateToken } = require('../functions/generateToken');
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
 const sendSms = require('../functions/sendSMS');
