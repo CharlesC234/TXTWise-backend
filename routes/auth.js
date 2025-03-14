@@ -118,12 +118,14 @@ router.post(
 
           // Set JWT in HTTP-Only Cookie
           res.cookie('token', token, {
-            httpOnly: false,
-            secure: false,
+            httpOnly: true,
+            secure: true,
             sameSite: 'None',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             overwrite: true,
           });
+
+          console.log("token" + token)
 
           // Send response with token
           res.status(200).json({ message: 'Phone number verified successfully.'});
