@@ -87,7 +87,7 @@ router.post(
 
           console.log(storedData);
 
-          if (storedData.data !== verificationCode) {
+          if (storedData !== verificationCode) {
             return res.status(400).json({ message: 'Invalid verification code.' });
           }
 
