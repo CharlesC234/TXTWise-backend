@@ -1,34 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const Queue = require('bull');
-const Redis = require('ioredis');
-const sendSms = require('../functions/sendSMS');
-
-
 require('dotenv').config();
-
-const Conversation = require('../models/conversation');
-const Message = require('../models/message');
+const MessageQueue = require('../models/queue');
+const sendSms = require('../functions/sendSMS');
+const processQueue = require('../functions/processQueue');
 const User = require('../models/user');
 
 const router = express.Router();
-
-// Redis Connection for Bull Queue
-// const redisClient = new Redis(process.env.REDIS_URL);
-
-// Bull Queue for Rate Limiting
-const messageQueue = new Queue('smsQueue', process.env.REDIS_URL);
-
-// AI Model Mapping
-//replace with TWILIO_PHONE_{num}
-const AI_MAP = {
-  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'Claude', apiKey: process.env.CLAUDE_API_KEY, url: 'https://api.claude.ai' },
-  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'ChatGPT', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
-  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'Deepseek', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1' },
-  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'Gemini', apiKey: process.env.GEMINI_API_KEY, url: 'https://api.gemini.com/v1' },
-  [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'Grok', apiKey: process.env.GROK_API_KEY, url: 'https://api.grok.com/v1' },
-};
 
 // Middleware: Parse URL-encoded Twilio data
 router.use(bodyParser.urlencoded({ extended: false }));
@@ -62,98 +41,10 @@ router.post('/webhook', async (req, res) => {
         return res.status(200).send('<Response></Response>'); // Stop further processing
       }
 
-  // Enqueue the message to respect rate limits
-  messageQueue.add({
-    from,
-    to,
-    incomingMessage,
-  });
+      await MessageQueue.create({ from, to, messageBody: incomingMessage });
+      processQueue();
 
   res.status(200).send('<Response></Response>'); // Twilio requires an immediate response
-});
-
-// Queue Processor
-messageQueue.process(async (job) => {
-  const { from, to, incomingMessage } = job.data;
-
-  try {
-    // Identify AI API based on Twilio Number
-    const aiConfig = AI_MAP[to];
-    if (!aiConfig) throw new Error('Invalid Twilio Number');
-
-    // Find or Create User
-    let user = await User.findOne({ phoneNumber: from });
-    if (!user) {
-      user = await User.create({ phoneNumber: from });
-    }
-
-    // Find or Create Conversation
-    let conversation = await Conversation.findOne({ user: user._id });
-    if (!conversation) {
-      conversation = await Conversation.create({ user: [user._id], messages: [] });
-    }
-
-    // Save Incoming Message
-    const userMessage = await Message.create({
-      conversationId: conversation._id,
-      sender: user._id,
-      messageBody: incomingMessage,
-      isAI: false,
-    });
-
-
-    conversation.messages.push(userMessage._id);
-    await conversation.save();
-
-    // Fetch Full Chat History
-    const fullHistory = await Message.find({ conversationId: conversation._id })
-      .sort({ timestamp: 1 })
-      .lean();
-
-    // Prepare messages for AI API
-    const formattedMessages = fullHistory.map((msg) => ({
-      role: msg.isAI ? 'assistant' : 'user',
-      content: msg.messageBody,
-    }));
-
-    // Call AI API
-    const aiResponse = await axios.post(
-      aiConfig.url,
-      {
-        model: aiConfig.name,
-        messages: formattedMessages,
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${aiConfig.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    const aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
-
-    // Save AI Message
-    const aiMessage = await Message.create({
-      conversationId: conversation._id,
-      sender: user._id,
-      messageBody: aiText,
-      isAI: true,
-    });
-
-    conversation.messages.push(aiMessage._id);
-    await conversation.save();
-
-        // Send AI Response Back via SignalWire SMS
-        await sendSms(aiText, to, from);
-
-        console.log(`Replied to ${from} using ${aiConfig.name}: ${aiText}`);
-        } catch (error) {
-        console.error('Error processing SMS:', error);
-
-        // Notify user of the error via SMS
-        await sendSms('Sorry, there was an issue processing your message. Please try again later.', to, from);
-        }
 });
 
 module.exports = router;

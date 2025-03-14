@@ -80,7 +80,7 @@ router.post('/', verifyToken, async (req, res) => {
 
       await twilioClient.messages.create({
         body: welcomeMessage,
-        from: process.env.TWILIO_PHONE_NUMBER, // Your Twilio phone number
+        from: process.env.SIGNALWIRE_PHONE_NUMBER, // Your Twilio phone number
         to: phoneNumber
       });
 
