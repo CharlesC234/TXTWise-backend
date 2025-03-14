@@ -14,6 +14,8 @@ router.get('/validate', async (req, res) => {
   try {
       const token = req.cookies.token; // Extract token from HTTP-only cookie
 
+      console.log("here: " + token);
+
       if (!token) {
           return res.status(401).json({ message: 'Unauthorized: No token provided' });
       }
