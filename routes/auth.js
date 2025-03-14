@@ -121,10 +121,11 @@ router.post(
             secure: true,
             sameSite: 'None',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            overwrite: true,
           });
 
           // Send response with token
-          res.status(200).json({ message: 'Phone number verified successfully.', token });
+          res.status(200).json({ message: 'Phone number verified successfully.'});
         } catch (error) {
           console.error('Error verifying phone number:', error);
           res.status(500).json({ message: 'Internal server error' });
