@@ -24,7 +24,7 @@ router.get(
     console.log(req.userId);
 
     // Fetch user details
-    const user = await User.findOne(phoneNumber)
+    const user = await User.findOne({ phoneNumber })
       .populate({
         path: 'conversations',
         populate: {
