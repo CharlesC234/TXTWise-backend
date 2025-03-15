@@ -6,45 +6,95 @@ const MessageQueue = require('../models/queue');
 const sendSms = require('../functions/sendSMS');
 const processQueue = require('../functions/processQueue');
 const User = require('../models/user');
+const Conversation = require('../models/conversation');
 
 const router = express.Router();
 
 // Middleware: Parse URL-encoded Twilio data
 router.use(bodyParser.urlencoded({ extended: false }));
 
+// Define AI Model Keywords
+const AI_KEYWORDS = ["CHATGPT", "GROK", "GEMINI", "CLAUDE", "DEEPSEEK"];
+
 // Webhook for Incoming SMS
 router.post('/webhook', async (req, res) => {
-  const from = req.body.From;
-  const to = req.body.To;
-  const incomingMessage = req.body.Body;
+    const from = req.body.From;
+    const to = req.body.To;
+    let incomingMessage = req.body.Body.trim().toUpperCase(); // Normalize input
 
-  console.log(`Incoming message from ${from} to ${to}: ${incomingMessage}`);
+    console.log(`Incoming message from ${from} to ${to}: ${incomingMessage}`);
 
-      // Check if the sender is a registered user
-      const user = await User.findOne({ phoneNumber: from });
+    // Check if the sender is a registered user
+    const user = await User.findOne({ phoneNumber: from });
 
-      if (!user) {
+    if (!user) {
         console.log(`Unauthorized number: ${from}. Sending registration link.`);
-
         await sendSms("You are not registered. Please create an account at https://txtwise.io/login to use this service.", to, from);
-  
         return res.status(200).send('<Response></Response>'); // Stop further processing
-      }
+    }
 
+    // Check if the user has any active conversations
+    let conversation = await Conversation.findOne({ user: user._id }).sort({ updatedAt: -1 });
 
-      if (user.conversations.length <= 0) {
-        console.log(`No active conversations: ${from}.`);
-    
-        await sendSms("You do not have any active conversations. Please log into your account at https://txtwise.io/login and initialize a conversation to use this service.",
-         to, from);
-  
+    if (!conversation) {
+        console.log(`No active conversations for ${from}.`);
+        await sendSms("You do not have any active conversations. Please log into your account at https://txtwise.io/login and initialize a conversation to use this service.", to, from);
         return res.status(200).send('<Response></Response>'); // Stop further processing
-      }
+    }
 
-      await MessageQueue.create({ from, to, messageBody: incomingMessage });
-      processQueue();
+    // Handle **Special Keywords** for user account info
+    switch (incomingMessage) {
+        case "STATUS":
+            const statusMessage = `You are currently using TXTWise.\n\n📌 Your Subscription: ${user.subscriptionStatus.toUpperCase()}\n💰 Tokens Remaining: ${user.dailyTokensRemaining} / 35,000\n🤖 Current AI Model: ${conversation.llm.toUpperCase()}\n\nManage your account at: https://txtwise.io`;
+            await sendSms(statusMessage, to, from);
+            return res.status(200).send('<Response></Response>');
 
-  res.status(200).send('<Response></Response>'); // Twilio requires an immediate response
+        case "HELP":
+            const helpMessage = `You have replied “HELP”\n\nReply with STOP, CANCEL, END, QUIT, UNSUBSCRIBE, or STOPALL to opt out.\nMsg & Data Rates May Apply.\n\nTo manage your account, visit https://txtwise.io/dashboard\nTo switch AI models, text: "CHATGPT", "GEMINI", "DEEPSEEK", "GROK", "CLAUDE".\nTo delete your account, go to Settings > Pause or Delete Account.\nNeed help? Contact us at txtwiseio@gmail.com.\n\nTXTWise by Launchwards, LLC\n7661 Canterbury Cir, Lakeland, FL`;
+            await sendSms(helpMessage, to, from);
+            return res.status(200).send('<Response></Response>');
+
+        case "SUBSCRIPTION":
+            const subscriptionMessage = `Your current subscription level: ${user.subscriptionStatus.toUpperCase()}.\n\nTo manage your subscription, go to: https://txtwise.io/pricing and log in with your phone number.`;
+            await sendSms(subscriptionMessage, to, from);
+            return res.status(200).send('<Response></Response>');
+
+        case "AI":
+            const aiMessage = `You are currently using ${conversation.llm.toUpperCase()}.\n\nTo switch AI models in this chat, text one of these keywords:\n- "CHATGPT"\n- "GEMINI"\n- "DEEPSEEK"\n- "GROK"\n- "CLAUDE"`;
+            await sendSms(aiMessage, to, from);
+            return res.status(200).send('<Response></Response>');
+
+        case "TOKENS":
+            const tokensMessage = `You have ${user.dailyTokensRemaining} out of 35,000 tokens remaining today.\n\nTo upgrade to unlimited tokens, subscribe at: https://txtwise.io/pricing and log in with your phone number.`;
+            await sendSms(tokensMessage, to, from);
+            return res.status(200).send('<Response></Response>');
+    }
+
+    // Check if the message starts with an AI model keyword (for switching models)
+    const words = incomingMessage.split(" ");
+    if (AI_KEYWORDS.includes(words[0])) {
+        const newLlm = words[0].toLowerCase(); // Convert to lowercase for consistency
+        console.log(`Switching LLM to: ${newLlm} for ${from}`);
+
+        // Update conversation with new AI model
+        conversation.llm = newLlm;
+        await conversation.save();
+
+        if (words.length === 1) {
+            // If the user only sent the AI keyword, acknowledge the switch
+            await sendSms(`You have switched to ${newLlm.toUpperCase()} for this conversation.`, to, from);
+            return res.status(200).send('<Response></Response>');
+        } else {
+            // If the user also included a message after the AI keyword, remove the keyword and proceed
+            incomingMessage = words.slice(1).join(" ");
+        }
+    }
+
+    // Add message to queue for processing
+    await MessageQueue.create({ from, to, messageBody: incomingMessage });
+    processQueue();
+
+    res.status(200).send('<Response></Response>'); // Twilio requires an immediate response
 });
 
 module.exports = router;
