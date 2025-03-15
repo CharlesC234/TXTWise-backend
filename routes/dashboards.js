@@ -19,10 +19,12 @@ const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, ne
 router.get(
   '/',
   verifyToken, async function (req, res){
-    const userId = req.userId;
+    const phoneNumber = req.userId;
+
+    console.log(req.userId);
 
     // Fetch user details
-    const user = await User.findById(userId)
+    const user = await User.findOne(phoneNumber)
       .populate({
         path: 'conversations',
         populate: {
