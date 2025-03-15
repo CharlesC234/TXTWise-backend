@@ -9,12 +9,13 @@ const sendSms = require('./sendSMS');
 let isProcessing = false; // Prevent multiple workers from running
 
 const AI_MAP = {
-    [process.env.SIGNALWIRE_PHONE_NUMBER_2]: { name: 'Claude', apiKey: process.env.CLAUDE_API_KEY, url: 'https://api.claude.ai' },
-    [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'ChatGPT', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
-    [process.env.SIGNALWIRE_PHONE_NUMBER_2]: { name: 'Deepseek', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1' },
-    [process.env.SIGNALWIRE_PHONE_NUMBER_2]: { name: 'Gemini', apiKey: process.env.GEMINI_API_KEY, url: 'https://api.gemini.com/v1' },
-    [process.env.SIGNALWIRE_PHONE_NUMBER_2]: { name: 'Grok', apiKey: process.env.GROK_API_KEY, url: 'https://api.grok.com/v1' },
-  };
+    [process.env.SIGNALWIRE_PHONE_NUMBER_2]: { name: 'claude-3-opus-20240229', apiKey: process.env.CLAUDE_API_KEY, url: 'https://api.anthropic.com/v1/messages' },
+    [process.env.SIGNALWIRE_PHONE_NUMBER]: { name: 'gpt-4-turbo', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
+    [process.env.SIGNALWIRE_PHONE_NUMBER_2]: { name: 'deepseek-chat', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1/chat/completions' },
+    [process.env.SIGNALWIRE_PHONE_NUMBER_2]: { name: 'gemini-1.5-pro-latest', apiKey: process.env.GEMINI_API_KEY, url: 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent' },
+    [process.env.SIGNALWIRE_PHONE_NUMBER_2]: { name: 'grok-1', apiKey: process.env.GROK_API_KEY, url: 'https://api.grok.com/v1/chat/completions' },
+};
+
 
 const processQueue = async () => {
   if (isProcessing) return; // Prevent duplicate processing
