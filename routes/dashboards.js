@@ -43,7 +43,7 @@ router.get(
       llm: conv.llm,
       initialPrompt: conv.initialPrompt,
       name: conv.name,
-      id: conv._id,
+      phone: conv.fromPhone,
     }));
 
     res.status(200).json({
