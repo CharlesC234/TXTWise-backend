@@ -10,12 +10,33 @@ let isProcessing = false; // Prevent multiple workers from running
 
 // AI Models are now mapped by LLM name instead of phone numbers
 const AI_MAP = {
-    "claude": { name: 'claude-3-opus-20240229', apiKey: process.env.CLAUDE_API_KEY, url: 'https://api.anthropic.com/v1/messages' },
-    "chatgpt": { name: 'gpt-4o', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
-    "deepseek": { name: 'deepseek-chat', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1/chat/completions' },
-    "gemini": { name: 'gemini-1.5-pro-latest', apiKey: process.env.GEMINI_API_KEY, url: 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent' },
-    "grok": { name: 'grok-2-latest', apiKey: process.env.GROK_API_KEY, url: 'https://api.x.ai/v1/chat/completions' },
+    "claude": { 
+        name: 'claude-3-opus-20240229', 
+        apiKey: process.env.CLAUDE_API_KEY, 
+        url: 'https://api.anthropic.com/v1/messages' 
+    },
+    "chatgpt": { 
+        name: 'gpt-4o', 
+        apiKey: process.env.CHATGPT_API_KEY, 
+        url: 'https://api.openai.com/v1/chat/completions' 
+    },
+    "deepseek": { 
+        name: 'deepseek-chat', 
+        apiKey: process.env.DEEPSEEK_API_KEY, 
+        url: 'https://api.deepseek.com/v1/chat/completions' 
+    },
+    "gemini": { 
+        name: 'gemini-1.5-pro-latest', 
+        apiKey: process.env.GEMINI_API_KEY, 
+        url: `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro-latest:generateContent?key=${process.env.GEMINI_API_KEY}`
+    },
+    "grok": { 
+        name: 'grok-2-latest', 
+        apiKey: process.env.GROK_API_KEY, 
+        url: 'https://grok.x.ai/v1/chat/completions' 
+    }
 };
+
 
 const processQueue = async () => {
     if (isProcessing) return; // Prevent duplicate processing
@@ -81,20 +102,34 @@ const processQueue = async () => {
                 content: msg.messageBody,
             }));
 
-            // Send message to AI API
-            const aiResponse = await axios.post(
-                aiConfig.url,
-                {
-                    model: aiConfig.name, // e.g., "gpt-4o"
-                    messages: formattedMessages, // Properly formatted messages
-                },
-                {
-                    headers: {
+                // Determine request payload based on AI model
+                let requestBody, requestHeaders;
+
+                // Special handling for Gemini
+                if (aiConfig.name.startsWith("gemini")) {
+                    requestBody = {
+                        contents: formattedMessages.map(msg => ({ role: msg.role, parts: [{ text: msg.content }] }))
+                    };
+                    requestHeaders = {
+                        'Content-Type': 'application/json', // No Authorization header for Gemini
+                    };
+                } else {
+                    requestBody = {
+                        model: aiConfig.name, // e.g., "gpt-4o"
+                        messages: formattedMessages, // Properly formatted messages
+                    };
+                    requestHeaders = {
                         'Authorization': `Bearer ${aiConfig.apiKey}`,
                         'Content-Type': 'application/json',
-                    },
+                    };
                 }
-            );
+
+                // Send message to AI API
+                const aiResponse = await axios.post(
+                    aiConfig.url, 
+                    requestBody, 
+                    { headers: requestHeaders }
+                );
 
             const aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
 

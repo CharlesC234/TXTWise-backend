@@ -19,6 +19,8 @@ async function sendSms(body, from, to) {
     Body: body,
   });
 
+  console.log("attempting to send: " + body + " From: " + from + "To: " + to);
+
   try {
     const response = await fetch(signalwireUrl, {
       method: 'POST',
