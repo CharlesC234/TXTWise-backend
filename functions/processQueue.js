@@ -14,7 +14,7 @@ const AI_MAP = {
     "chatgpt": { name: 'gpt-4o', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
     "deepseek": { name: 'deepseek-chat', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1/chat/completions' },
     "gemini": { name: 'gemini-1.5-pro-latest', apiKey: process.env.GEMINI_API_KEY, url: 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent' },
-    "grok": { name: 'grok-1', apiKey: process.env.GROK_API_KEY, url: 'https://api.grok.com/v1/chat/completions' },
+    "grok": { name: 'grok-2-latest', apiKey: process.env.GROK_API_KEY, url: 'https://api.x.ai/v1/chat/completions' },
 };
 
 const processQueue = async () => {
