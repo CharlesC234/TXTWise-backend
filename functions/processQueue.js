@@ -58,16 +58,33 @@ const processQueue = async () => {
       await conversation.save();
 
       // Fetch Chat History
-      const formattedMessages = await Message.find({ conversationId: conversation._id })
-        .sort({ timestamp: 1 })
-        .lean();
+        // Fetch Chat History from MongoDB
+        const fullHistory = await Message.find({ conversationId: conversation._id })
+        .sort({ timestamp: 1 }) // Sort messages by timestamp (oldest first)
+        .lean(); // Convert Mongoose objects to plain JSON
+
+        // Transform into OpenAI's expected format
+        const formattedMessages = fullHistory.map((msg) => ({
+        role: msg.isAI ? 'assistant' : 'user', // Determine role based on isAI flag
+        content: msg.messageBody, // Extract only the message content
+        }));
+
 
       // Send message to AI API
       const aiResponse = await axios.post(
         aiConfig.url,
-        { model: aiConfig.name, messages: formattedMessages },
-        { headers: { 'Authorization': `Bearer ${aiConfig.apiKey}`, 'Content-Type': 'application/json' } }
+        {
+          model: aiConfig.name, // e.g., "gpt-4-turbo"
+          messages: formattedMessages, // Properly formatted messages
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${aiConfig.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
       );
+      
 
       const aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
 
