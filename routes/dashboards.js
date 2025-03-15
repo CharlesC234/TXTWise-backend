@@ -38,6 +38,8 @@ router.get(
       conversationId: conv._id,
       messageCount: conv.messages.length,
       lastUpdated: conv.updatedAt,
+      llm: conv.llm,
+      initialPrompt: conv.initialPrompt,
     }));
 
     res.status(200).json({
