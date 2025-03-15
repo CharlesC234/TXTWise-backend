@@ -4,10 +4,9 @@ const mongoose = require('mongoose');
 const Conversation = require('../models/conversation');
 const User = require('../models/user');
 const Message = require('../models/message');
-const twilio = require('twilio');
 require('dotenv').config();
 const { verifyToken } = require('../functions/verifyToken');
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const sendSms = require('../functions/sendSMS');
 
 
 /**
@@ -78,11 +77,12 @@ router.post('/', verifyToken, async (req, res) => {
         Happy chatting!
       `;
 
-      await twilioClient.messages.create({
-        body: welcomeMessage,
-        from: process.env.SIGNALWIRE_PHONE_NUMBER, // Your Twilio phone number
-        to: phoneNumber
-      });
+      await sendSms(
+        welcomeMessage,
+        process.env.SIGNALWIRE_PHONE_NUMBER,
+        phoneNumber
+      );
+      
 
       res.status(201).json(savedConversation);
     } catch (error) {
