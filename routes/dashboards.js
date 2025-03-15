@@ -40,6 +40,8 @@ router.get(
       lastUpdated: conv.updatedAt,
       llm: conv.llm,
       initialPrompt: conv.initialPrompt,
+      name: conv.name,
+      id: conv._id,
     }));
 
     res.status(200).json({
