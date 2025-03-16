@@ -74,7 +74,7 @@ const processQueue = async () => {
       const isImageRequest = job.messageBody.trim().toLowerCase().startsWith("generate image:");
 
       if (isImageRequest) {
-        const openai = new OpenAI({ apiKey: aiConfig.apiKey });
+        const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
 
         const prompt = job.messageBody.replace(/generate image:/i, '').trim();
         const imageResp = await openai.images.generate({

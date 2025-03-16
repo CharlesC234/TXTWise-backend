@@ -66,7 +66,7 @@ router.post('/webhook', async (req, res) => {
             return res.status(200).send('<Response></Response>');
 
         case "TOKENS":
-            const tokensMessage = `You have ${user.dailyTokensRemaining} out of 35,000 tokens remaining today.\n\nTo upgrade to unlimited tokens, subscribe at: txtwise.io/pricing and log in with your phone number.`;
+            const tokensMessage = `You have ${user.dailyTokensRemaining} out of 25,000 tokens remaining today.\n\nTo upgrade to unlimited tokens, subscribe at: txtwise.io/pricing and log in with your phone number.`;
             await sendSms(tokensMessage, to, from);
             return res.status(200).send('<Response></Response>');
     }
