@@ -87,7 +87,7 @@ const processQueue = async () => {
         }
       );
 
-      console.log("HERE: " + aiResponse.data.choices);
+      console.log("HERE: " + JSON.stringify(aiResponse.data.choices));
       
 
       const aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
