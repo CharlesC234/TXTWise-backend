@@ -12,6 +12,75 @@ const router = express.Router();
 // Middleware for error handling
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+
+
+
+router.get('/token-usage', async (req, res) => {
+    const userId = req.user._id; // Assume user is authenticated (via middleware)
+    const timeframe = req.query.timeframe || 'week';
+  
+    let startDate = new Date();
+    startDate.setHours(0, 0, 0, 0); // Normalize
+  
+    switch (timeframe) {
+      case 'month':
+        startDate.setDate(1);
+        break;
+      case 'year':
+        startDate.setMonth(0, 1);
+        break;
+      case 'all':
+        startDate = new Date(0); // Epoch
+        break;
+      case 'week':
+      default:
+        startDate.setDate(startDate.getDate() - 6);
+        break;
+    }
+  
+    const usageRecords = await TokenUsage.find({
+      user: userId,
+      date: { $gte: startDate }
+    }).lean();
+  
+    // Get all dates between startDate and today
+    const daysRange = [];
+    const tempDate = new Date(startDate);
+    while (tempDate <= new Date()) {
+      daysRange.push(new Date(tempDate));
+      tempDate.setDate(tempDate.getDate() + 1);
+    }
+  
+    const usageByModel = {
+      chatgpt: [],
+      claude: [],
+      deepseek: [],
+      grok: [],
+      gemini: [],
+    };
+  
+    daysRange.forEach(date => {
+      const formattedDate = date.toISOString().slice(0, 10);
+      for (const model in usageByModel) {
+        const record = usageRecords.find(r =>
+          r.model === model && r.date.toISOString().slice(0, 10) === formattedDate
+        );
+        usageByModel[model].push(record ? record.tokensUsed : 0);
+      }
+    });
+  
+    res.json({
+      categories: daysRange.map(d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+      series: Object.keys(usageByModel).map(model => ({
+        name: model.charAt(0).toUpperCase() + model.slice(1),
+        data: usageByModel[model]
+      }))
+    });
+  });
+
+  
+
+
 /**
  * GET Dashboard Info: Active Chats, Daily Tokens Left
  * Route: GET /dashboards/

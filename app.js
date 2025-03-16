@@ -6,12 +6,31 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const cors = require('cors');
 app.use(bodyParser.json());
+const cron = require('node-cron');
+const User = require('./models/user'); // Adjust path if needed
 // const router = express.Router();
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('MongoDB Connected ✅'))
+.then(() => {
+    console.log('MongoDB Connected ✅');
+
+    // ✅ Start the token reset cron job AFTER DB connects
+    cron.schedule('0 0 * * *', async () => {
+      try {
+        console.log("🔄 Resetting all users' tokens to 25,000...");
+
+        const result = await User.updateMany({}, { dailyTokensRemaining: 25000 });
+
+        console.log(`✅ Token reset complete for ${result.modifiedCount} users.`);
+      } catch (err) {
+        console.error('❌ Error resetting tokens:', err);
+      }
+    });
+
+  })
   .catch(err => console.log(err));
+
 
 // Routes
 const authRoutes = require('./routes/auth');

@@ -102,6 +102,17 @@ router.post('/webhook', async (req, res) => {
         }
     }
 
+
+    if (user.subscriptionStatus === 'free' && user.dailyTokensRemaining <= 0) {
+        await sendSms(
+            "Daily token limit reached, you have used all 25,000 tokens for today. Tokens reset to 25,000 at midnight, you can also upgrade to unlimited tokens for $5/month at txtwise.io/pricing.",
+            to,
+            from
+        );
+        return res.status(200).send('<Response></Response>');
+    }
+    
+
     // Add message to queue for processing
     await MessageQueue.create({ from, to, messageBody: incomingMessage });
     processQueue();

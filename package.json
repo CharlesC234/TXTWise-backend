@@ -25,6 +25,7 @@
     "ioredis": "^5.5.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.10.1",
+    "node-cron": "^3.0.3",
     "openai": "^4.87.3",
     "stripe": "^17.6.0",
     "twilio": "^5.4.5"
