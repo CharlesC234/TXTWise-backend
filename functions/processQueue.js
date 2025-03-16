@@ -86,6 +86,8 @@ const processQueue = async () => {
           },
         }
       );
+
+      console.log(aiResponse);
       
 
       const aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
