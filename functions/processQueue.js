@@ -6,60 +6,50 @@ const User = require('../models/user');
 const MessageQueue = require('../models/queue');
 const sendSms = require('./sendSMS');
 
-let isProcessing = false; // Prevent multiple workers from running
+// SDK Imports
+const Anthropic = require('@anthropic-ai/sdk');
+const OpenAI = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// AI Models are now mapped by LLM name instead of phone numbers
+let isProcessing = false;
+
+// AI_MAP remains for identification purposes
 const AI_MAP = {
-    "claude": { name: 'claude-3-opus-20240229', apiKey: process.env.CLAUDE_API_KEY, url: 'https://api.anthropic.com/v1/messages' },
+    "claude": { name: 'claude-3-opus-20240229', apiKey: process.env.CLAUDE_API_KEY },
     "chatgpt": { name: 'gpt-4o', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
     "deepseek": { name: 'deepseek-chat', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1/chat/completions' },
-    "gemini": { name: 'gemini-1.5-pro-latest', apiKey: process.env.GEMINI_API_KEY, url: 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent' },
+    "gemini": { name: 'gemini-1.5-pro-latest', apiKey: process.env.GEMINI_API_KEY },
     "grok": { name: 'grok-2-latest', apiKey: process.env.GROK_API_KEY, url: 'https://api.x.ai/v1/chat/completions' },
 };
 
 const processQueue = async () => {
-    if (isProcessing) return; // Prevent duplicate processing
+    if (isProcessing) return;
     isProcessing = true;
     console.log("Processing message queue...");
 
     while (true) {
-        // Fetch the oldest "pending" message
         const job = await MessageQueue.findOneAndUpdate(
             { status: 'pending' },
             { status: 'processing' },
             { new: true }
         );
 
-        if (!job) break; // No more pending messages, exit loop
+        if (!job) break;
 
         try {
             console.log(`Processing message from ${job.from} to ${job.to}: ${job.messageBody}`);
 
-            // Find user
-            let user = await User.findOne({ phoneNumber: job.from });
-            if (!user) {
-                console.error(`User not found for phone number: ${job.from}`);
-                throw new Error("User not found");
-            }
+            const user = await User.findOne({ phoneNumber: job.from });
+            if (!user) throw new Error("User not found");
 
-            // Find conversation where "to" matches "fromPhone"
-            let conversation = await Conversation.findOne({ fromPhone: job.to, user: user._id });
+            const conversation = await Conversation.findOne({ fromPhone: job.to, user: user._id });
+            if (!conversation) throw new Error("No active conversation found");
 
-            if (!conversation) {
-                console.error(`No active conversation found for ${job.to}`);
-                throw new Error("No active conversation found");
-            }
-
-            // Identify AI model based on conversation's llm field
             const aiConfig = AI_MAP[conversation.llm];
-            if (!aiConfig) {
-                console.error(`Invalid AI model specified: ${conversation.llm}`);
-                throw new Error(`Invalid AI model: ${conversation.llm}`);
-            }
+            if (!aiConfig) throw new Error(`Invalid AI model: ${conversation.llm}`);
 
             console.log(`Using AI model: ${conversation.llm} (${aiConfig.name})`);
 
-            // Save Incoming Message
             const userMessage = await Message.create({
                 conversationId: conversation._id,
                 sender: user._id,
@@ -70,40 +60,67 @@ const processQueue = async () => {
             conversation.messages.push(userMessage._id);
             await conversation.save();
 
-            // Fetch Chat History
-            const fullHistory = await Message.find({ conversationId: conversation._id })
-                .sort({ timestamp: 1 }) // Sort messages by timestamp (oldest first)
-                .lean();
-
-            // Format messages for API
-            const formattedMessages = fullHistory.map((msg) => ({
+            const fullHistory = await Message.find({ conversationId: conversation._id }).sort({ timestamp: 1 }).lean();
+            const formattedMessages = fullHistory.map(msg => ({
                 role: msg.isAI ? 'assistant' : 'user',
                 content: msg.messageBody,
             }));
 
-             // Send message to AI API
-             console.log(aiConfig.name);
-             console.log(aiConfig.url);
-             const aiResponse = await axios.post(
-                aiConfig.url,
-                {
-                    model: aiConfig.name, // e.g., "gpt-4o"
-                    messages: formattedMessages, // Properly formatted messages
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${aiConfig.apiKey}`,
-                        'Content-Type': 'application/json',
+            let aiText = 'No response from AI.';
+
+            // Claude Handling
+            if (conversation.llm === 'claude') {
+                const anthropic = new Anthropic({ apiKey: aiConfig.apiKey });
+                const response = await anthropic.messages.create({
+                    model: aiConfig.name,
+                    max_tokens: 1000,
+                    messages: formattedMessages,
+                });
+                aiText = response?.content?.[0]?.text || 'No response from Claude.';
+                console.log("Claude Response:", response);
+
+            // Deepseek Handling (OpenAI SDK with baseURL)
+            } else if (conversation.llm === 'deepseek') {
+                const openai = new OpenAI({
+                    apiKey: aiConfig.apiKey,
+                    baseURL: 'https://api.deepseek.com',
+                });
+
+                const response = await openai.chat.completions.create({
+                    model: aiConfig.name,
+                    messages: formattedMessages,
+                });
+                aiText = response.choices?.[0]?.message?.content || 'No response from Deepseek.';
+                console.log("Deepseek Response:", response);
+
+            // Gemini Handling
+            } else if (conversation.llm === 'gemini') {
+                const genAI = new GoogleGenerativeAI(aiConfig.apiKey);
+                const model = genAI.getGenerativeModel({ model: aiConfig.name });
+
+                const result = await model.generateContent(job.messageBody);
+                aiText = await result.response.text();
+                console.log("Gemini Response:", aiText);
+
+            // ChatGPT & Grok - handled via Axios
+            } else {
+                const response = await axios.post(
+                    aiConfig.url,
+                    {
+                        model: aiConfig.name,
+                        messages: formattedMessages,
                     },
-                }
-            );
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${aiConfig.apiKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                    }
+                );
+                aiText = response.data.choices?.[0]?.message?.content || 'No response from AI.';
+                console.log("ChatGPT/Grok Response:", response.data);
+            }
 
-            console.log("HERE2: " + JSON.stringify(aiResponse.data.choices));
-            
-
-            const aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
-
-            // Save AI Message
             const aiMessage = await Message.create({
                 conversationId: conversation._id,
                 sender: user._id,
@@ -114,14 +131,12 @@ const processQueue = async () => {
             conversation.messages.push(aiMessage._id);
             await conversation.save();
 
-            // Send AI response to user via SMS
             await sendSms(aiText, job.to, job.from);
-
             console.log(`Sent reply to ${job.from} using ${conversation.llm}: ${aiText}`);
 
-            // Mark message as completed
             job.status = 'completed';
             await job.save();
+
         } catch (error) {
             console.error('Error processing message:', error);
             job.status = 'failed';

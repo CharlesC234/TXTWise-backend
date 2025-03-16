@@ -10,6 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google/generative-ai": "^0.24.0",
     "@signalwire/node": "^3.0.3",
     "@signalwire/realtime-api": "^4.1.1",
     "axios": "^1.7.9",
@@ -23,6 +25,7 @@
     "ioredis": "^5.5.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.10.1",
+    "openai": "^4.87.3",
     "stripe": "^17.6.0",
     "twilio": "^5.4.5"
   }
