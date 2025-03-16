@@ -126,7 +126,13 @@ const processQueue = async () => {
             }
             
 
-            const aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
+            let aiText = 'No response from AI.';
+
+                if (conversation.llm === 'gemini') {
+                aiText = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini.';
+                } else {
+                aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
+                }
 
             // Save AI Message
             const aiMessage = await Message.create({
