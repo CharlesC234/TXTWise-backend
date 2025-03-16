@@ -5,6 +5,7 @@ const Conversation = require('../models/conversation');
 const Subscription = require('../models/subscription');
 const tempClient = require('../functions/tempClient'); // Redis utility functions
 const { verifyToken } = require('../functions/verifyToken');
+const TokenUsage = require('../models/tokens');
 require('dotenv').config();
 
 const router = express.Router();
