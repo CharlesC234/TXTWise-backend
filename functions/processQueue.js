@@ -77,6 +77,10 @@ const processQueue = async () => {
         const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
 
         const prompt = job.messageBody.replace(/generate image:/i, '').trim();
+
+          // 1. Immediately inform user
+        await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
+
         const imageResp = await openai.images.generate({
           prompt,
           n: 1,
