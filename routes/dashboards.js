@@ -15,7 +15,7 @@ const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, ne
 
 
 
-router.get('/token-usage', async (req, res) => {
+router.get('/token-usage', verifyToken, async (req, res) => {
     const userId = req.user._id; // Assume user is authenticated (via middleware)
     const timeframe = req.query.timeframe || 'week';
   
