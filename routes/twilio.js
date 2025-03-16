@@ -46,17 +46,17 @@ router.post('/webhook', async (req, res) => {
     // Handle **Special Keywords** for user account info
     switch (incomingMessage) {
         case "STATUS":
-            const statusMessage = `You are currently using TXTWise.\n\n Your Subscription: ${user.subscriptionStatus.toUpperCase()}\n Tokens Remaining: ${user.dailyTokensRemaining} / 35,000\n Current AI Model: ${conversation.llm.toUpperCase()}\n\nManage your account at: txtwise.io`;
+            const statusMessage = `You are currently using TXTWise.\n\n Your Subscription: ${user.subscriptionStatus.toUpperCase()}\n Tokens Remaining: ${user.dailyTokensRemaining} / 35,000\n Current AI Model: ${conversation.llm.toUpperCase()}\n\nManage your account at:`;
             await sendSms(statusMessage, to, from);
             return res.status(200).send('<Response></Response>');
 
         case "HELP":
-            const helpMessage = `You have replied “HELP”\n\nReply with STOP, CANCEL, END, QUIT, UNSUBSCRIBE, or STOPALL to opt out.\nMsg & Data Rates May Apply.\n\nTo manage your account, visit https://txtwise.io/dashboard\nTo switch AI models, text: "CHATGPT", "GEMINI", "DEEPSEEK", "GROK", "CLAUDE".\nTo delete your account, go to Settings > Pause or Delete Account.\nNeed help? Contact us at txtwiseio@gmail.com.\n\nTXTWise by Launchwards, LLC\n7661 Canterbury Cir, Lakeland, FL`;
+            const helpMessage = `You have replied “HELP”\n\nReply with STOP, CANCEL, END, QUIT, UNSUBSCRIBE, or STOPALL to opt out.\nMsg & Data Rates May Apply.\n\nTo manage your account, visit \nTo switch AI models, text: "CHATGPT", "GEMINI", "DEEPSEEK", "GROK", "CLAUDE".\nTo delete your account, go to Settings > Pause or Delete Account.\nNeed help? Contact us at txtwiseio@gmail.com.\n\nTXTWise by Launchwards, LLC\n7661 Canterbury Cir, Lakeland, FL`;
             await sendSms(helpMessage, to, from);
             return res.status(200).send('<Response></Response>');
 
         case "SUBSCRIPTION":
-            const subscriptionMessage = `Your current subscription level: ${user.subscriptionStatus.toUpperCase()}.\n\nTo manage your subscription, go to: txtwise.io/pricing and log in with your phone number.`;
+            const subscriptionMessage = `Your current subscription level: ${user.subscriptionStatus.toUpperCase()}.\n\nTo manage your subscription, go to: and log in with your phone number.`;
             await sendSms(subscriptionMessage, to, from);
             return res.status(200).send('<Response></Response>');
 
@@ -66,7 +66,7 @@ router.post('/webhook', async (req, res) => {
             return res.status(200).send('<Response></Response>');
 
         case "TOKENS":
-            const tokensMessage = `You have ${user.dailyTokensRemaining} out of 25,000 tokens remaining today.\n\nTo upgrade to unlimited tokens, subscribe at: txtwise.io/pricing and log in with your phone number.`;
+            const tokensMessage = `You have ${user.dailyTokensRemaining} out of 25,000 tokens remaining today.\n\nTo upgrade to unlimited tokens, subscribe at: and log in with your phone number.`;
             await sendSms(tokensMessage, to, from);
             return res.status(200).send('<Response></Response>');
     }
