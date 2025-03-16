@@ -73,7 +73,7 @@ const processQueue = async () => {
       // 📸 Detect Image Generation Request
       const isImageRequest = job.messageBody.trim().toLowerCase().startsWith("generate image:");
 
-      if (isImageRequest && conversation.llm === 'chatgpt') {
+      if (isImageRequest) {
         const openai = new OpenAI({ apiKey: aiConfig.apiKey });
 
         const prompt = job.messageBody.replace(/generate image:/i, '').trim();
