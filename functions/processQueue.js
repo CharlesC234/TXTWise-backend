@@ -81,20 +81,50 @@ const processQueue = async () => {
                 content: msg.messageBody,
             }));
 
-            // Send message to AI API
-            const aiResponse = await axios.post(
-                aiConfig.url,
-                {
-                    model: aiConfig.name, // e.g., "gpt-4o"
-                    messages: formattedMessages, // Properly formatted messages
+            let aiResponse;
+
+            if (conversation.llm === 'gemini') {
+              const geminiUrl = `${aiConfig.url}?key=${aiConfig.apiKey}`;
+              const geminiRequest = {
+                contents: formattedMessages.map(msg => ({
+                  role: msg.role,
+                  parts: [{ text: msg.content }],
+                })),
+              };
+            
+              aiResponse = await axios.post(geminiUrl, geminiRequest, {
+                headers: { 'Content-Type': 'application/json' },
+              });
+            
+            } else if (conversation.llm === 'claude') {
+              const claudeRequest = {
+                model: aiConfig.name,
+                messages: formattedMessages,
+                max_tokens: 1000,
+              };
+            
+              aiResponse = await axios.post(aiConfig.url, claudeRequest, {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-api-key': aiConfig.apiKey,
                 },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${aiConfig.apiKey}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
+              });
+            
+            } else {
+              // OpenAI, DeepSeek, Grok, etc.
+              const defaultRequest = {
+                model: aiConfig.name,
+                messages: formattedMessages,
+              };
+            
+              aiResponse = await axios.post(aiConfig.url, defaultRequest, {
+                headers: {
+                  'Authorization': `Bearer ${aiConfig.apiKey}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+            }
+            
 
             const aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
 
