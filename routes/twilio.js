@@ -7,6 +7,7 @@ const sendSms = require('../functions/sendSMS');
 const processQueue = require('../functions/processQueue');
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
+const Message = require('../models/message'); // Ensure this is imported at the top
 
 const router = express.Router();
 
@@ -73,19 +74,30 @@ router.post('/webhook', async (req, res) => {
     // Check if the message starts with an AI model keyword (for switching models)
     const words = incomingMessage.split(" ");
     if (AI_KEYWORDS.includes(words[0])) {
-        const newLlm = words[0].toLowerCase(); // Convert to lowercase for consistency
+        const newLlm = words[0].toLowerCase();
         console.log(`Switching LLM to: ${newLlm} for ${from}`);
-
+    
         // Update conversation with new AI model
         conversation.llm = newLlm;
         await conversation.save();
-
+    
+        // Log the switch in the conversation as a system message
+        const switchMessage = await Message.create({
+            conversationId: conversation._id,
+            sender: user._id, // Optional: You can use a dedicated "system" ID or keep the user
+            messageBody: `You switched AI models to ${newLlm.toUpperCase()} for this conversation.`,
+            isAI: false,
+        });
+    
+        conversation.messages.push(switchMessage._id);
+        await conversation.save();
+    
         if (words.length === 1) {
-            // If the user only sent the AI keyword, acknowledge the switch
+            // Only AI keyword provided — acknowledge switch
             await sendSms(`You have switched to ${newLlm.toUpperCase()} for this conversation.`, to, from);
             return res.status(200).send('<Response></Response>');
         } else {
-            // If the user also included a message after the AI keyword, remove the keyword and proceed
+            // Proceed with trimmed message
             incomingMessage = words.slice(1).join(" ");
         }
     }
