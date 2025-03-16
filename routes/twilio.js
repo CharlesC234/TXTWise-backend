@@ -48,7 +48,7 @@ router.post('/webhook', async (req, res) => {
     // Handle **Special Keywords** for user account info
     switch (messageNonCase) {
         case "STATUS":
-            const statusMessage = `You are currently using TXTWise.\n\n Your Subscription: ${user.subscriptionStatus.toUpperCase()}\n Tokens Remaining: ${user.dailyTokensRemaining} / 35,000\n Current AI Model: ${conversation.llm.toUpperCase()}\n\nManage your account at: txtwise(io)`;
+            const statusMessage = `You are currently using TXTWise.\n\n Your Subscription: ${user.subscriptionStatus.toUpperCase()}\n Tokens Remaining: ${user.dailyTokensRemaining} / 25,000 (Daily)\n Current AI Model: ${conversation.llm.toUpperCase()}\n\nManage your account at: txtwise(io)`;
             await sendSms(statusMessage, to, from);
             return res.status(200).send('<Response></Response>');
 
