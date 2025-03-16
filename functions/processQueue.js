@@ -82,6 +82,8 @@ const processQueue = async () => {
             }));
 
              // Send message to AI API
+             console.log(aiConfig.name);
+             console.log(aiConfig.url);
              const aiResponse = await axios.post(
                 aiConfig.url,
                 {
@@ -96,7 +98,7 @@ const processQueue = async () => {
                 }
             );
 
-            console.log("HERE2: " + aiResponse.data.choices);
+            console.log("HERE2: " + JSON.stringify(aiResponse.data.choices));
             
 
             const aiText = aiResponse.data.choices?.[0]?.message?.content || 'No response from AI.';
