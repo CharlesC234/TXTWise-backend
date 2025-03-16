@@ -138,7 +138,7 @@ const processQueue = async () => {
           console.log("ChatGPT/Grok Response:", response.data);
         }
 
-        await logTokenUsage(user._id, conversation.llm, aiText);
+        await logTokenUsage(user._id, conversation.llm, aiText, isImageRequest);
       }
 
       // Save AI Message

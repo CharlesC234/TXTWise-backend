@@ -2,12 +2,16 @@
 const TokenUsage = require('../models/tokens'); // Assuming path
 const User = require('../models/user');
 
-async function logTokenUsage(userId, modelName, messageText) {
+async function logTokenUsage(userId, modelName, messageText, isImage) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   // Estimate tokens used (basic heuristic: 1 token per 4 characters)
-  const estimatedTokens = Math.ceil(messageText.length / 4);
+  let estimatedTokens = Math.ceil(messageText.length / 4);
+
+  if(isImage){
+    estimatedTokens = 150;
+  }
 
   // Update TokenUsage collection
   await TokenUsage.findOneAndUpdate(
