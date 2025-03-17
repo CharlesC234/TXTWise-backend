@@ -36,10 +36,11 @@ const processQueue = async () => {
 
   while (true) {
     const job = await MessageQueue.findOneAndUpdate(
-      { status: 'pending' },
-      { status: 'processing' },
-      { new: true }
-    );
+        { status: 'pending' },
+        { status: 'processing' },
+        { sort: { priority: 1, createdAt: 1 }, new: true }
+      );
+      
 
     if (!job) break;
 
@@ -67,7 +68,7 @@ const processQueue = async () => {
       const userMessage = await Message.create({
         conversationId: conversation._id,
         sender: user._id,
-        messageBody: decryptedMessage, // ✅ decrypted here, model will encrypt
+        messageBody: decryptedMessage,
         isAI: false,
       });
 
@@ -78,16 +79,33 @@ const processQueue = async () => {
       let mediaUrl = null;
       const lowerMessage = decryptedMessage.trim().toLowerCase();
     const isImageRequest = imageKeywords.some(keyword => lowerMessage.includes(keyword));
-
+///Image gen//
+//
+///
     if (isImageRequest) {
-    const prompt = decryptedMessage.replace(/generate image:/i, '').trim();
-    await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
-    const imageResp = await openai.images.generate({ prompt, n: 1, size: '512x512' });
-    mediaUrl = imageResp.data[0]?.url;
-    aiText = `Here is your generated image:`;
-    await logTokenUsage(user._id, conversation.llm, prompt, true);
-    } else {
-        // 🔓 Decrypt all messages for context
+        if (user.subscriptionStatus !== 'premium') {
+          await sendSms(
+            "Image generation is a subscription feature. Please upgrade your subscription at txtwise(io).",
+            job.to,
+            job.from
+          );
+      
+          job.status = 'completed';
+          await job.save();
+          continue; // Skip this job
+        }
+      
+        const prompt = decryptedMessage.replace(/generate image:/i, '').trim();
+        await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
+      
+        const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
+        const imageResp = await openai.images.generate({ prompt, n: 1, size: '512x512' });
+      
+        mediaUrl = imageResp.data[0]?.url;
+        aiText = `Here is your generated image:`;
+        await logTokenUsage(user._id, conversation.llm, prompt, true);
+      } else {
+
         const fullHistory = await Message.find({ conversationId: conversation._id }).sort({ timestamp: 1 });
         const decryptedHistory = await Promise.all(fullHistory.map(async (msg) => ({
           role: msg.isAI ? 'assistant' : 'user',
@@ -113,7 +131,7 @@ const processQueue = async () => {
         } else if (conversation.llm === 'gemini') {
           const genAI = new GoogleGenerativeAI(aiConfig.apiKey);
           const model = genAI.getGenerativeModel({ model: aiConfig.name });
-          const result = await model.generateContent(decryptedMessage); // ✅ decrypted
+          const result = await model.generateContent(decryptedMessage); // decrypted
 
           aiText = await result.response.text();
         } else {

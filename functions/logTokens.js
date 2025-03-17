@@ -6,7 +6,7 @@ async function logTokenUsage(userId, modelName, messageText, isImage) {
   now.setMinutes(0, 0, 0); // Normalize to start of the hour
   const usageDate = new Date(now);
 
-  // Estimate tokens used (simple heuristic)
+
   let estimatedTokens = Math.ceil(messageText.length / 4);
   if (isImage) {
     estimatedTokens = 150; // Flat token cost for image gen

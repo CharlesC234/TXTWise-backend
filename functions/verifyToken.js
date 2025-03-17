@@ -1,8 +1,7 @@
 require('dotenv').config();
-const jwt = require('jsonwebtoken'); // Make sure to import jsonwebtoken
-/**
- * JWT Verification Middleware
- */
+const jwt = require('jsonwebtoken'); 
+
+
 const verifyToken = (req, res, next) => {
     const token = req.cookies.token; // Token stored in HTTP-only cookie
   

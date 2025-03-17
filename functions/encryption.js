@@ -1,8 +1,7 @@
-// utils/encryption.js
 const crypto = require('crypto');
 
 const algorithm = 'aes-256-cbc';
-const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex'); // 32 bytes key (256 bits)
+const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
 const ivLength = 16; // AES block size
 
 function encrypt(text) {

@@ -5,8 +5,8 @@ const signalwireUrl = `${process.env.SIGNALWIRE_SPACE_URL}/api/laml/2010-04-01/A
 const authHeader = `Basic ${Buffer.from(`${process.env.SIGNALWIRE_PROJECT_ID}:${process.env.SIGNALWIRE_API_TOKEN}`).toString('base64')}`;
 
 // Queue Map per phone number (from number) => Queue
-const smsQueues = new Map();  // e.g., "+1234567890" => [{ body, from, to, mediaUrl, resolve, reject }]
-const processingStatus = new Map();  // Tracks which numbers are currently processing
+const smsQueues = new Map(); 
+const processingStatus = new Map(); 
 
 /**
  * Internal: Process queue for a specific phone number

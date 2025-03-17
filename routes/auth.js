@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const tempClient = require('../functions/tempClient'); // Redis utility functions
+const tempClient = require('../functions/tempClient'); 
 const twilio = require('twilio');
 require('dotenv').config();
 const { verifyToken } = require('../functions/verifyToken');
@@ -53,13 +53,11 @@ router.post('/send', async function (req, res) {
     return res.status(400).json({ message: 'Phone number required.' });
   }
 
-  // Generate a 6-digit verification code
+
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Save phone number and verification code temporarily in Redis
   await tempClient.saveTemporarySignupData(phoneNumber, verificationCode);
 
-  // Get the two dedicated auth numbers
   const authNumbers = [
     process.env.SIGNALWIRE_PHONE_NUMBER_AUTH6,
     process.env.SIGNALWIRE_PHONE_NUMBER_AUTH7
@@ -68,10 +66,9 @@ router.post('/send', async function (req, res) {
   // Randomly select one of the two numbers
   const selectedAuthNumber = authNumbers[Math.floor(Math.random() * authNumbers.length)];
 
-  // Send the SMS using the selected number
   const response = await sendSms(
     `Your TXTWise verification code is: ${verificationCode}`,
-    selectedAuthNumber,  // Use selected auth number here
+    selectedAuthNumber,  
     phoneNumber
   );
 
@@ -93,7 +90,7 @@ router.post('/send', async function (req, res) {
         }
 
         try {
-          // Retrieve stored data from Redis (OTP verification)
+
           const storedData = await tempClient.getTemporarySignupData(phoneNumber);
 
           if (!storedData) {
@@ -106,11 +103,9 @@ router.post('/send', async function (req, res) {
             return res.status(400).json({ message: 'Invalid verification code.' });
           }
 
-          // Check if user already exists
           let user = await User.findOne({ phoneNumber });
 
           if (!user) {
-            // Create new user with default values
             user = new User({
               phoneNumber: phoneNumber,
               name: '',
@@ -124,10 +119,9 @@ router.post('/send', async function (req, res) {
             await user.save();
           }
 
-          // Generate JWT
           const token = generateToken(user.phoneNumber);
 
-          // Set JWT in HTTP-Only Cookie
+     
           res.cookie('token', token, {
             httpOnly: true,
             secure: true,
@@ -138,7 +132,7 @@ router.post('/send', async function (req, res) {
 
           console.log("token" + token)
 
-          // Send response with token
+  
           res.status(200).json({ message: 'Phone number verified successfully.'});
         } catch (error) {
           console.error('Error verifying phone number:', error);
@@ -149,7 +143,7 @@ router.post('/send', async function (req, res) {
 
       router.delete('/delete-account', verifyToken, async (req, res) => {
         try {
-          const phoneNumber = req.userId; // Extracted from token
+          const phoneNumber = req.userId;
           const user = await User.findOne({ phoneNumber });
       
           if (!user) {
@@ -158,17 +152,17 @@ router.post('/send', async function (req, res) {
       
           const userId = user._id;
       
-          // 1. Find conversations linked to user
+     
           const conversations = await Conversation.find({ user: userId });
           const conversationIds = conversations.map(c => c._id);
       
-          // 2. Delete all messages in those conversations
+       
           await Message.deleteMany({ conversationId: { $in: conversationIds } });
       
-          // 3. Delete all conversations
+        
           await Conversation.deleteMany({ _id: { $in: conversationIds } });
       
-          // 4. Delete user
+    
           await User.deleteOne({ _id: userId });
       
           res.status(200).json({ message: 'User account and all associated data have been deleted.' });

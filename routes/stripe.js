@@ -6,24 +6,23 @@ const User = require('../models/user');
 require('dotenv').config();
 const router = express.Router();
 
-// Stripe Webhook Secret (set in your Stripe Dashboard)
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 router.post('/create-checkout-session', async (req, res) => {
-  const { userId, planType } = req.body; // From frontend
+  const { userId, planType } = req.body; 
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],
     line_items: [
       {
-        price: process.env.PRICE_ID, // Monthly or yearly price ID
+        price: process.env.PRICE_ID, 
         quantity: 1,
       },
     ],
     metadata: {
-      userId,       // 👈 REQUIRED for your webhook to find the user
-      planType,     // 👈 'monthly' or 'yearly' — used for Subscription model
+      userId,      
+      planType,     
     },
     success_url: 'https://txtwise.io/dashboard',
     cancel_url: 'https://txtwise.io/dashboard',
@@ -32,7 +31,6 @@ router.post('/create-checkout-session', async (req, res) => {
   res.json({ sessionId: session.id });
 });
 
-// Middleware: Raw body parser for Stripe Webhook
 router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
 
@@ -45,28 +43,27 @@ router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Handle specific event types from Stripe
+
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
 
-      // Extract metadata (userId passed during checkout)
+
       const userId = session.metadata.userId;
       const customerId = session.customer;
       const subscriptionId = session.subscription;
 
       try {
-        // Update or Create Subscription in MongoDB
         const subscription = await Subscription.findOneAndUpdate(
           { userId },
           {
             userId,
-            planType: session.metadata.planType, // Example: 'monthly' or 'yearly'
+            planType: session.metadata.planType, 
             stripeCustomerId: customerId,
             stripeSubscriptionId: subscriptionId,
             status: 'active',
             startDate: new Date(),
-            endDate: null, // Reset on new subscription
+            endDate: null, 
           },
           { upsert: true, new: true }
         );
@@ -87,7 +84,6 @@ router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req
       const session = event.data.object;
       const customerId = session.customer;
 
-      // Find user by Stripe Customer ID and downgrade plan
       const subscription = await Subscription.findOneAndUpdate(
         { stripeCustomerId: customerId },
         { status: 'past_due' }
@@ -105,7 +101,6 @@ router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req
       const subscription = event.data.object;
       const customerId = subscription.customer;
 
-      // Find and update user subscription
       const dbSubscription = await Subscription.findOneAndUpdate(
         { stripeCustomerId: customerId },
         { status: 'canceled', endDate: new Date() }

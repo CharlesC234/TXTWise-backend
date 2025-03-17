@@ -7,6 +7,7 @@ const messageQueueSchema = new mongoose.Schema({
   messageBody: String,
   status: { type: String, default: 'pending' },
   createdAt: { type: Date, default: Date.now },
+  priority: { type: Number, default: 1 },
 });
 
 messageQueueSchema.index({ status: 1 });

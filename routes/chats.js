@@ -33,7 +33,7 @@ const CONVERSATION_NUMBERS = [
   };
   
 
-  // GET user's conversation by ID (ownership check)
+
 async function findUserConversation(req, res, next) {
     const user = await getUserByPhone(req.userId);
     const userId = user._id;
@@ -46,7 +46,7 @@ async function findUserConversation(req, res, next) {
   
     if (!conversation) return res.status(404).json({ message: 'Conversation not found or not authorized' });
   
-    req.conversation = conversation; // Pass to next handler
+    req.conversation = conversation; 
     next();
   }
 
@@ -61,25 +61,24 @@ router.post('/', verifyToken, async (req, res) => {
         return res.status(400).json({ error: "Missing required fields: phoneNumber, LLM, fromPhone" });
       }
   
-      // 🔍 Find user by phone number
+
       const user = await User.findOne({ phoneNumber });
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
   
       const userId = user._id;
-  
-      // 🔎 Count user's active conversations
+
       const existingConversations = await Conversation.find({ user: userId });
       const userConvoCount = existingConversations.length;
   
-      // ✅ Subscription limit enforcement
+
       const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
       if (userConvoCount >= maxConvosAllowed) {
         return res.status(403).json({ error: `Conversation limit reached. Max allowed: ${maxConvosAllowed}` });
       }
   
-      // ✅ Create new conversation
+
       const conversation = new Conversation({
         user: userId,
         llm: LLM.toLowerCase(),
@@ -92,7 +91,7 @@ router.post('/', verifyToken, async (req, res) => {
   
       const savedConversation = await conversation.save();
   
-      // ✅ Link to user
+
       await User.updateOne(
         { _id: userId },
         { $push: { conversations: savedConversation._id } }
@@ -176,7 +175,7 @@ router.put('/pause/:id', verifyToken, findUserConversation, async function (req,
   
     if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
   
-    // Send alert SMS
+ 
     await sendUserAlert(req.userId, conversation.fromPhone, '📴 Your chat has been paused. Resume it anytime from your dashboard.');
   
     res.status(200).json({ message: 'Conversation paused', conversation });
@@ -189,10 +188,10 @@ router.put('/pause/:id', verifyToken, findUserConversation, async function (req,
 router.put('/pauseAll', verifyToken, async function (req, res) {
     try {
       const user = await getUserByPhone(req.userId);
-      const userId = user._id; // From verifyToken
+      const userId = user._id; 
   
       await Conversation.updateMany(
-        { user: userId }, // Filter conversations by user
+        { user: userId }, 
         { $set: { paused: true } }
       );
   
@@ -214,7 +213,7 @@ router.put('/resume/:id', verifyToken, findUserConversation, async function (req
   
     if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
   
-    // Send alert SMS
+
     await sendUserAlert(req.userId, conversation.fromPhone, '✅ Your chat has been resumed and is now active.');
   
     res.status(200).json({ message: 'Conversation resumed', conversation });
@@ -247,13 +246,13 @@ router.delete('/:id', verifyToken, findUserConversation, async function (req, re
     const conversation = await Conversation.findById(req.params.id);
     if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
   
-    // Send alert SMS before deleting
+    
     await sendUserAlert(req.userId, conversation.fromPhone, '❌ Your chat has been deleted. You can create a new chat anytime.');
   
-    // Remove messages related to the conversation
+
     await Message.deleteMany({ conversationId: conversation._id });
   
-    // Remove conversation from users
+
     await User.updateMany(
       { _id: { $in: conversation.user } },
       { $pull: { conversations: conversation._id } }
@@ -273,18 +272,15 @@ router.delete('/deleteAll', verifyToken, async function (req, res) {
       const user = await getUserByPhone(req.userId);
       const userId = user._id;
   
-      // Find all conversations for the user
+    
       const userConversations = await Conversation.find({ user: userId });
   
       const conversationIds = userConversations.map((conv) => conv._id);
   
-      // Delete all messages in the user's conversations
       await Message.deleteMany({ conversationId: { $in: conversationIds } });
   
-      // Delete the conversations
       await Conversation.deleteMany({ _id: { $in: conversationIds } });
   
-      // Remove conversation references from the user
       await User.findByIdAndUpdate(userId, { $set: { conversations: [] } });
   
       res.status(200).json({ message: 'All your conversations and messages have been deleted.' });
@@ -312,7 +308,6 @@ router.put('/:id', verifyToken, findUserConversation, async function (req, res){
     conversation.updatedAt = new Date();
     const updatedConversation = await conversation.save();
   
-    // Send alert SMS
     await sendUserAlert(phoneNumber, conversation.fromPhone, '📝 Your chat settings have been updated.');
   
     res.status(200).json({ message: 'Conversation updated', updatedConversation });
@@ -323,7 +318,7 @@ router.put('/:id', verifyToken, findUserConversation, async function (req, res){
 // GET /api/conversation/available-number
 router.get('/available-number', verifyToken, async (req, res) => {
     try {
-      const phoneNumber = req.userId; // Assuming req.userId = phoneNumber from middleware
+      const phoneNumber = req.userId;
   
       const user = await User.findOne({ phoneNumber });
       if (!user) return res.status(404).json({ error: 'User not found' });
@@ -331,13 +326,11 @@ router.get('/available-number', verifyToken, async (req, res) => {
       const userConversations = await Conversation.find({ user: user._id });
       const userConvoCount = userConversations.length;
   
-      // Enforce conversation limits
       const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
       if (userConvoCount >= maxConvosAllowed) {
         return res.status(403).json({ error: 'Conversation limit reached for your subscription level.' });
       }
   
-      // Build map of phone numbers and their total conversation count
       const conversationCounts = await Conversation.aggregate([
         { $match: { fromPhone: { $in: CONVERSATION_NUMBERS } } },
         { $group: { _id: "$fromPhone", count: { $sum: 1 } } }
@@ -345,17 +338,15 @@ router.get('/available-number', verifyToken, async (req, res) => {
   
       const phoneUsageMap = {};
       CONVERSATION_NUMBERS.forEach(num => {
-        phoneUsageMap[num] = 0; // Initialize to 0
+        phoneUsageMap[num] = 0;
       });
   
       conversationCounts.forEach(entry => {
         phoneUsageMap[entry._id] = entry.count;
       });
   
-      // Get the phone numbers the user already has conversations with
       const userPhoneNumbers = new Set(userConversations.map(convo => convo.fromPhone));
   
-      // Sort phone numbers by least usage, excluding ones the user already has
       const sortedAvailableNumbers = CONVERSATION_NUMBERS
         .filter(num => !userPhoneNumbers.has(num))
         .sort((a, b) => phoneUsageMap[a] - phoneUsageMap[b]);
@@ -376,12 +367,11 @@ router.get('/available-number', verifyToken, async (req, res) => {
 
   router.get('/count', verifyToken, async (req, res) => {
     try {
-      const phoneNumber = req.userId; // User's phone number from middleware
+      const phoneNumber = req.userId; 
   
       const user = await User.findOne({ phoneNumber });
       if (!user) return res.status(404).json({ error: 'User not found' });
   
-      // Count all non-paused (active) conversations
       const activeCount = await Conversation.countDocuments({ user: user._id, paused: false });
   
       res.json({ activeConversations: activeCount });
@@ -393,24 +383,21 @@ router.get('/available-number', verifyToken, async (req, res) => {
   });
 
 
-// GET /chat/:id (Secure Version)
-// GET /chat/:id (Secure Version with Decryption)
 router.get('/:id', verifyToken, async function (req, res) {
-    const phoneNumber = req.userId; // VerifyToken sets req.userId to phoneNumber
+    const phoneNumber = req.userId; 
   
     const user = await User.findOne({ phoneNumber });
     if (!user) return res.status(404).json({ message: 'User not found' });
   
     const conversation = await Conversation.findOne({ _id: req.params.id, user: user._id })
       .populate('user', 'name phoneNumber')
-      .populate('messages') // Messages will still have encrypted bodies
+      .populate('messages')
       .exec();
   
     if (!conversation) return res.status(404).json({ message: 'Conversation not found or unauthorized' });
   
-    // Decrypt each message body
     const decryptedMessages = await Promise.all(conversation.messages.map(async (msg) => {
-      // Re-fetch the message to access schema methods
+    
       const fullMessage = await Message.findById(msg._id);
       const decryptedBody = fullMessage.getDecryptedMessage();
       return {

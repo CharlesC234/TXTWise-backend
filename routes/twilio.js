@@ -7,37 +7,33 @@ const sendSms = require('../functions/sendSMS');
 const processQueue = require('../functions/processQueue');
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
-const Message = require('../models/message'); // Ensure this is imported at the top
+const Message = require('../models/message');
 
 const router = express.Router();
 
-// Middleware: Parse URL-encoded Twilio data
+
 router.use(bodyParser.urlencoded({ extended: false }));
 
-// Define AI Model Keywords
 const AI_KEYWORDS = ["CHATGPT", "GROK", "GEMINI", "CLAUDE", "DEEPSEEK"];
 
-// Webhook for Incoming SMS
 router.post('/webhook', async (req, res) => {
     const from = req.body.From;
     const to = req.body.To;
-    let incomingMessage = req.body.Body.trim().toUpperCase(); // Normalize input
+    let incomingMessage = req.body.Body.trim().toUpperCase();
 
     console.log(`Incoming message from ${from} to ${to}: ${incomingMessage}`);
 
-    // Check if the sender is a registered user
     const user = await User.findOne({ phoneNumber: from });
 
     if (!user) {
         console.log(`Unauthorized number: ${from}. Sending registration link.`);
         await sendSms("You are not registered. Please create an account at https://txtwise.io/login to use this service.", to, from);
-        return res.status(200).send('<Response></Response>'); // Stop further processing
+        return res.status(200).send('<Response></Response>');
     }
 
-    // Check if the user has any active conversations
     const conversation = await Conversation.findOne({ 
         user: user._id,
-        fromPhone: to  // Make sure this matches the field name for SignalWire number in your Conversation schema
+        fromPhone: to  
     }).sort({ updatedAt: -1 });
 
     if (!conversation) {
@@ -51,12 +47,12 @@ router.post('/webhook', async (req, res) => {
 }
 
     if(conversation.paused){
-        return res.status(200).send('<Response></Response>'); // Stop further processing
+        return res.status(200).send('<Response></Response>');
     }
 
-    const messageNonCase = incomingMessage.toUpperCase(); // For keyword checks only
+    const messageNonCase = incomingMessage.toUpperCase(); 
 
-    // Handle **Special Keywords** for user account info
+
     switch (messageNonCase) {
         case "STATUS":
             const statusMessage = `You are currently using TXTWise.\n\n Your Subscription: ${user.subscriptionStatus.toUpperCase()}\n Tokens Remaining: ${user.dailyTokensRemaining} / 7,500 (Daily)\n Current AI Model: ${conversation.llm.toUpperCase()}\n\nManage your account at: txtwise(io)`;
@@ -84,20 +80,18 @@ router.post('/webhook', async (req, res) => {
             return res.status(200).send('<Response></Response>');
     }
 
-    // Check if the message starts with an AI model keyword (for switching models)
     const words = incomingMessage.split(" ");
     if (AI_KEYWORDS.includes(words[0])) {
         const newLlm = words[0].toLowerCase();
         console.log(`Switching LLM to: ${newLlm} for ${from}`);
     
-        // Update conversation with new AI model
+
         conversation.llm = newLlm;
         await conversation.save();
     
-        // Log the switch in the conversation as a system message
         const switchMessage = await Message.create({
             conversationId: conversation._id,
-            sender: user._id, // Optional: You can use a dedicated "system" ID or keep the user
+            sender: user._id,
             messageBody: `You switched AI models to ${newLlm.toUpperCase()} for this conversation.`,
             isAI: false,
         });
@@ -106,11 +100,10 @@ router.post('/webhook', async (req, res) => {
         await conversation.save();
     
         if (words.length === 1) {
-            // Only AI keyword provided — acknowledge switch
+
             await sendSms(`You have switched to ${newLlm.toUpperCase()} for this conversation.`, to, from);
             return res.status(200).send('<Response></Response>');
         } else {
-            // Proceed with trimmed message
             incomingMessage = words.slice(1).join(" ");
         }
     }
@@ -127,10 +120,14 @@ router.post('/webhook', async (req, res) => {
     
 
     // Add message to queue for processing
-    await MessageQueue.create({ from, to, messageBody: incomingMessage });
-    processQueue();
-
-    res.status(200).send('<Response></Response>'); // Twilio requires an immediate response
+    await MessageQueue.create({ 
+        from, 
+        to, 
+        messageBody: incomingMessage, 
+        priority: user.subscriptionStatus === 'premium' ? 0 : 1 
+      });
+      processQueue();
+    res.status(200).send('<Response></Response>');
 });
 
 module.exports = router;

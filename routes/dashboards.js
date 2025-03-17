@@ -10,7 +10,6 @@ require('dotenv').config();
 
 const router = express.Router();
 
-// Middleware for error handling
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 
@@ -18,7 +17,7 @@ const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, ne
 
 router.get('/token-usage', verifyToken, async (req, res) => {
     try {
-      const phoneNumber = req.userId; // From verifyToken middleware
+      const phoneNumber = req.userId; 
       const user = await User.findOne({ phoneNumber });
       if (!user) return res.status(404).json({ error: 'User not found' });
   
@@ -34,7 +33,7 @@ router.get('/token-usage', verifyToken, async (req, res) => {
       let categories = [];
   
       if (timeframe === 'today') {
-        // 📅 Hourly breakdown for past 24 hours (ends at current hour)
+
         const now = new Date();
         now.setMinutes(0, 0, 0); // Round to start of current hour
         const startHour = new Date(now);
@@ -53,7 +52,7 @@ router.get('/token-usage', verifyToken, async (req, res) => {
         }
   
         hourlyRange.forEach(hour => {
-          const hourISO = hour.toISOString().slice(0, 13); // e.g., "2025-03-09T14"
+          const hourISO = hour.toISOString().slice(0, 13);
           categories.push(hour.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }));
   
           for (const model in usageByModel) {
@@ -66,7 +65,7 @@ router.get('/token-usage', verifyToken, async (req, res) => {
         });
   
       } else {
-        // 📅 Daily breakdown for week, month, or year
+   
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Start of today
         const startDate = new Date(today);
@@ -91,7 +90,7 @@ router.get('/token-usage', verifyToken, async (req, res) => {
   
         const tempDate = new Date(startDate);
         while (tempDate <= today) {
-          const dateISO = tempDate.toISOString().slice(0, 10); // e.g., "2025-03-09"
+          const dateISO = tempDate.toISOString().slice(0, 10);
           categories.push(tempDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
   
           for (const model in usageByModel) {
@@ -134,7 +133,7 @@ router.get(
 
     console.log(req.userId);
 
-    // Fetch user details
+
     const user = await User.findOne({ phoneNumber })
       .populate({
         path: 'conversations',
@@ -146,7 +145,7 @@ router.get(
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Extract active conversations and tokens
+
     const activeConversations = user.conversations.map((conv) => ({
       conversationId: conv._id,
       messageCount: conv.messages.length,
@@ -175,7 +174,6 @@ router.get(
   verifyToken, async function (req, res){
     const userId = req.userId;
 
-    // Check Subscription Status
     const subscription = await Subscription.findOne({ userId, status: 'active' });
 
     res.status(200).json({
@@ -195,7 +193,7 @@ router.get(
     verifyToken, async function (req, res){
       const userId = req.userId;
   
-      // get user by id
+
       const userData = await User.findOne({ userId});
   
       res.status(200).json(userData);
