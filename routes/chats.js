@@ -99,18 +99,19 @@ router.post('/', verifyToken, async (req, res) => {
   
       // 📲 Send welcome SMS
       const welcomeMessage = `
-  Welcome to TXTWise! 🎉
+  Welcome to TXTWise! 
   
   You are now chatting with ${LLM}. To start, just send a message.
   
-  📌 *How to use this chat*:
+  *How to use this chat*:
   - Send any message to start the conversation.
   - If you provided an initial prompt, the chatbot will respond accordingly.
   - Switch models at any time by typing: "CHATGPT", "GROK", "GEMINI", "DEEPSEEK", or "CLAUDE"
   
-  ❌ To opt out, reply with *STOP*.
-  🔄 To restart a chat, reply with *RESET*.
-  🛠️ Need help? Reply with *HELP*.
+  - To opt out, reply with *STOP*.
+  - To restart a chat, reply with *RESET*.
+  - Need help? Reply with *HELP*.
+  - Other useful keywords: "KEYWORDS", "STATUS", "AI", "TOKENS", "SUBSCRIPTION"
   
   Happy chatting!
   `;
@@ -142,13 +143,13 @@ router.post('/', verifyToken, async (req, res) => {
   
       // Construct Ping Message (similar to Welcome Message)
       const pingMessage = `
-  🔔 Ping from TXTWise:
+  Ping from TXTWise:
   
   You're chatting with *${conversation.llm.toUpperCase()}*. Send a message anytime.
   
-  💡 Need help? Reply with *HELP*.
-  ❌ To opt out, reply with *STOP*.
-  🔄 To restart chat, reply *RESET*.
+   - Need help? Reply with *HELP*.
+   - To opt out, reply with *STOP*.
+   - To restart chat, reply *RESET*.
   `;
   
       await sendSms(pingMessage, conversation.fromPhone, phoneNumber);
@@ -176,7 +177,7 @@ router.put('/pause/:id', verifyToken, findUserConversation, async function (req,
     if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
   
  
-    await sendUserAlert(req.userId, conversation.fromPhone, '📴 Your chat has been paused. Resume it anytime from your dashboard.');
+    await sendUserAlert(req.userId, conversation.fromPhone, '*** Your chat has been paused. Resume it anytime from your dashboard.');
   
     res.status(200).json({ message: 'Conversation paused', conversation });
   });
@@ -214,7 +215,7 @@ router.put('/resume/:id', verifyToken, findUserConversation, async function (req
     if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
   
 
-    await sendUserAlert(req.userId, conversation.fromPhone, '✅ Your chat has been resumed and is now active.');
+    await sendUserAlert(req.userId, conversation.fromPhone, '*** Your chat has been resumed and is now active.');
   
     res.status(200).json({ message: 'Conversation resumed', conversation });
   });
@@ -247,7 +248,7 @@ router.delete('/:id', verifyToken, findUserConversation, async function (req, re
     if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
   
     
-    await sendUserAlert(req.userId, conversation.fromPhone, '❌ Your chat has been deleted. You can create a new chat anytime.');
+    await sendUserAlert(req.userId, conversation.fromPhone, '***** Your chat has been deleted. You can create a new chat anytime.');
   
 
     await Message.deleteMany({ conversationId: conversation._id });
@@ -308,7 +309,7 @@ router.put('/:id', verifyToken, findUserConversation, async function (req, res){
     conversation.updatedAt = new Date();
     const updatedConversation = await conversation.save();
   
-    await sendUserAlert(phoneNumber, conversation.fromPhone, '📝 Your chat settings have been updated.');
+    await sendUserAlert(phoneNumber, conversation.fromPhone, '*** Your chat settings have been updated.');
   
     res.status(200).json({ message: 'Conversation updated', updatedConversation });
   });

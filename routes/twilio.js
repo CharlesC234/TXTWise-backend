@@ -78,6 +78,18 @@ router.post('/webhook', async (req, res) => {
             const tokensMessage = `You have ${user.dailyTokensRemaining} out of 7,500 tokens remaining today.\n\nTo upgrade to unlimited tokens, subscribe at: txtwise(io) and log in with your phone number.`;
             await sendSms(tokensMessage, to, from);
             return res.status(200).send('<Response></Response>');
+        
+        case "KEYWORDS":
+            const keywordsMessage = `Here are some useful keywords:\n\n
+            "STATUS"\n
+            "HELP"\n
+            "TOKENS"\n
+            "AI"\n
+            "SUBSCRIPTION"\n
+            "GROK", "CHATGPT", "GEMINI", "DEEPSEEK", "CLAUDE"`;
+            await sendSms(keywordsMessage, to, from);
+            return res.status(200).send('<Response></Response>');
+
     }
 
     const words = incomingMessage.split(" ");

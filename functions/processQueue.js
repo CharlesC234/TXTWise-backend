@@ -162,6 +162,7 @@ const processQueue = async () => {
       await job.save();
     } catch (error) {
       console.error('Error processing message:', error);
+      await sendSms(error, job.to, job.from);
       job.status = 'failed';
       await job.save();
     }
