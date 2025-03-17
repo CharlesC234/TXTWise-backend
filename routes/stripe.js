@@ -14,7 +14,7 @@ router.post('/create-checkout-session', async (req, res) => {
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
-    payment_method_types: ['card', 'afterpay_clearpay'],
+    payment_method_types: ['card'],
     line_items: [
       {
         price: process.env.PRICE_ID, // Monthly or yearly price ID
