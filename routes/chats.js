@@ -86,7 +86,7 @@ router.post('/', verifyToken, async (req, res) => {
         fromPhone,
         initialPrompt: initialPrompt?.trim() || "",
         messages: [],
-        historyDisabled: historyDisabled || false // 🔥 New
+        historyDisabled: user.subscriptionStatus == "free" ? false : historyDisabled || false
       });
   
       const savedConversation = await conversation.save();
@@ -294,17 +294,27 @@ router.delete('/deleteAll', verifyToken, async function (req, res) {
 /**
  * EDIT conversation (e.g., change users, update data)
  */
-router.put('/:id', verifyToken, findUserConversation, async function (req, res){
+router.put('/:id', verifyToken, findUserConversation, async function (req, res) {
     const { chatName, llm, initialPrompt, historyDisabled } = req.body;
     const phoneNumber = req.userId;
+  
+    const user = await User.findOne({ phoneNumber });
+    if (!user) return res.status(404).json({ message: 'User not found' });
   
     const conversation = await Conversation.findById(req.params.id);
     if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
   
-    if (LLM) conversation.llm = llm;
+    if (llm) conversation.llm = llm;
     if (chatName) conversation.name = chatName;
     if (initialPrompt) conversation.initialPrompt = initialPrompt;
-    if (typeof historyDisabled === 'boolean') conversation.historyDisabled = historyDisabled; 
+  
+    if (typeof historyDisabled === 'boolean') {
+      if (user.subscriptionStatus === 'premium') {
+        conversation.historyDisabled = historyDisabled;
+      } else {
+        return res.status(403).json({ message: 'History disabling is a premium feature. Please upgrade.' });
+      }
+    }
   
     conversation.updatedAt = new Date();
     const updatedConversation = await conversation.save();
@@ -313,6 +323,7 @@ router.put('/:id', verifyToken, findUserConversation, async function (req, res){
   
     res.status(200).json({ message: 'Conversation updated', updatedConversation });
   });
+  
   
 
 
