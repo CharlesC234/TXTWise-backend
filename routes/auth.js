@@ -8,6 +8,8 @@ const { generateToken } = require('../functions/generateToken');
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
 const sendSms = require('../functions/sendSMS');
+const Message = require('../models/message');
+const Conversation = require('../models/conversation');
 
 
 router.get('/validate', async (req, res) => {
@@ -132,6 +134,38 @@ router.post(
         } catch (error) {
           console.error('Error verifying phone number:', error);
           res.status(500).json({ message: 'Internal server error' });
+        }
+      });
+
+
+      router.delete('/delete-account', verifyToken, async (req, res) => {
+        try {
+          const phoneNumber = req.userId; // Extracted from token
+          const user = await User.findOne({ phoneNumber });
+      
+          if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+          }
+      
+          const userId = user._id;
+      
+          // 1. Find conversations linked to user
+          const conversations = await Conversation.find({ user: userId });
+          const conversationIds = conversations.map(c => c._id);
+      
+          // 2. Delete all messages in those conversations
+          await Message.deleteMany({ conversationId: { $in: conversationIds } });
+      
+          // 3. Delete all conversations
+          await Conversation.deleteMany({ _id: { $in: conversationIds } });
+      
+          // 4. Delete user
+          await User.deleteOne({ _id: userId });
+      
+          res.status(200).json({ message: 'User account and all associated data have been deleted.' });
+        } catch (err) {
+          console.error('Error deleting user:', err);
+          res.status(500).json({ error: 'Internal server error.' });
         }
       });
 
