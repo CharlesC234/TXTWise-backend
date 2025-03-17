@@ -23,6 +23,16 @@ const CONVERSATION_NUMBERS = [
     return user;
   };
 
+
+  const sendUserAlert = async (userPhone, fromPhone, message) => {
+    try {
+      await sendSms(message, fromPhone, userPhone);
+    } catch (err) {
+      console.error('Failed to send user alert SMS:', err);
+    }
+  };
+  
+
   // GET user's conversation by ID (ownership check)
 async function findUserConversation(req, res, next) {
     const user = await getUserByPhone(req.userId);
@@ -157,16 +167,20 @@ router.post('/', verifyToken, async (req, res) => {
  * PAUSE a conversation (add paused flag)
  */
 router.put('/pause/:id', verifyToken, findUserConversation, async function (req, res) {
-  const conversation = await Conversation.findByIdAndUpdate(
-    req.params.id,
-    { $set: { paused: true } },
-    { new: true }
-  );
-
-  if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
-
-  res.status(200).json({ message: 'Conversation paused', conversation });
-});
+    const conversation = await Conversation.findByIdAndUpdate(
+      req.params.id,
+      { $set: { paused: true } },
+      { new: true }
+    );
+  
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
+  
+    // Send alert SMS
+    await sendUserAlert(req.userId, conversation.fromPhone, '📴 Your chat has been paused. Resume it anytime from your dashboard.');
+  
+    res.status(200).json({ message: 'Conversation paused', conversation });
+  });
+  
 
 /**
  * PAUSE all conversations
@@ -191,16 +205,20 @@ router.put('/pauseAll', verifyToken, async function (req, res) {
  * RESUME a paused conversation
  */
 router.put('/resume/:id', verifyToken, findUserConversation, async function (req, res){
-  const conversation = await Conversation.findByIdAndUpdate(
-    req.params.id,
-    { $set: { paused: false } },
-    { new: true }
-  );
-
-  if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
-
-  res.status(200).json({ message: 'Conversation resumed', conversation });
-});
+    const conversation = await Conversation.findByIdAndUpdate(
+      req.params.id,
+      { $set: { paused: false } },
+      { new: true }
+    );
+  
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
+  
+    // Send alert SMS
+    await sendUserAlert(req.userId, conversation.fromPhone, '✅ Your chat has been resumed and is now active.');
+  
+    res.status(200).json({ message: 'Conversation resumed', conversation });
+  });
+  
 
 /**
  * RESUME all conversations
@@ -225,24 +243,26 @@ router.put('/resumeAll', verifyToken, async function (req, res) {
  * DELETE conversation by ID
  */
 router.delete('/:id', verifyToken, findUserConversation, async function (req, res){
-  const conversation = await Conversation.findById(req.params.id);
-
-  if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
-
-  // Remove messages related to the conversation
-  await Message.deleteMany({ conversationId: conversation._id });
-
-  // Remove conversation from users
-  await User.updateMany(
-    { _id: { $in: conversation.user } },
-    { $pull: { conversations: conversation._id } }
-  );
-
-  // Delete conversation
-  await conversation.remove();
-
-  res.status(200).json({ message: 'Conversation deleted' });
-});
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
+  
+    // Send alert SMS before deleting
+    await sendUserAlert(req.userId, conversation.fromPhone, '❌ Your chat has been deleted. You can create a new chat anytime.');
+  
+    // Remove messages related to the conversation
+    await Message.deleteMany({ conversationId: conversation._id });
+  
+    // Remove conversation from users
+    await User.updateMany(
+      { _id: { $in: conversation.user } },
+      { $pull: { conversations: conversation._id } }
+    );
+  
+    await conversation.remove();
+  
+    res.status(200).json({ message: 'Conversation deleted' });
+  });
+  
 
 /**
  * DELETE all conversations
@@ -277,23 +297,25 @@ router.delete('/deleteAll', verifyToken, async function (req, res) {
  * EDIT conversation (e.g., change users, update data)
  */
 router.put('/:id', verifyToken, findUserConversation, async function (req, res){
-  const {chatName, LLM, initialPrompt } = req.body;
-  const phoneNumber = req.userId;
-
-  const conversation = await Conversation.findById(req.params.id);
-  if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
-
-  if (LLM) conversation.llm = LLM;
-  if (chatName) conversation.name = chatName;
-  if (initialPrompt) conversation.initialPrompt = initialPrompt
-
-  conversation.updatedAt = new Date();
-
-  const updatedConversation = await conversation.save();
-
-  res.status(200).json({ message: 'Conversation updated', updatedConversation });
-});
-
+    const { chatName, LLM, initialPrompt } = req.body;
+    const phoneNumber = req.userId;
+  
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
+  
+    if (LLM) conversation.llm = LLM;
+    if (chatName) conversation.name = chatName;
+    if (initialPrompt) conversation.initialPrompt = initialPrompt;
+  
+    conversation.updatedAt = new Date();
+    const updatedConversation = await conversation.save();
+  
+    // Send alert SMS
+    await sendUserAlert(phoneNumber, conversation.fromPhone, '📝 Your chat settings have been updated.');
+  
+    res.status(200).json({ message: 'Conversation updated', updatedConversation });
+  });
+  
 
 
 // GET /api/conversation/available-number
