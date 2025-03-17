@@ -11,6 +11,8 @@ const Anthropic = require('@anthropic-ai/sdk');
 const OpenAI = require('openai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
+
 let isProcessing = false;
 
 const AI_MAP = {
