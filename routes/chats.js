@@ -37,11 +37,11 @@ router.get('/:id', verifyToken, async function (req, res){
  */
 router.post('/', verifyToken, async (req, res) => {
     try {
-      const { phoneNumber, LLM, initialPrompt } = req.body;
-  
-      if (!phoneNumber || !LLM) {
-        return res.status(400).json({ error: "Missing required fields: phoneNumber, LLM" });
-      }
+        const { phoneNumber, LLM, initialPrompt, fromPhone, chatName } = req.body;
+
+        if (!phoneNumber || !LLM || !fromPhone) {
+          return res.status(400).json({ error: "Missing required fields: phoneNumber, LLM, fromPhone" });
+        }        
 
       // Find user by phone number
       const user = await User.findOne({ phoneNumber });
@@ -55,9 +55,12 @@ router.post('/', verifyToken, async (req, res) => {
       const conversation = new Conversation({
         user: userId,
         llm: LLM.toLowerCase(),
-        initialPrompt: initialPrompt || "", // Save only if provided
+        name: chatName,
+        fromPhone,
+        initialPrompt: initialPrompt || "",
         messages: [],
       });
+      
   
       // Save conversation to DB
       const savedConversation = await conversation.save();
@@ -88,9 +91,10 @@ router.post('/', verifyToken, async (req, res) => {
 
       await sendSms(
         welcomeMessage,
-        process.env.SIGNALWIRE_PHONE_NUMBER,
+        fromPhone, // Use fromPhone here
         phoneNumber
       );
+      
       
 
       res.status(201).json(savedConversation);
@@ -290,6 +294,25 @@ router.get('/available-number', verifyToken, async (req, res) => {
     } catch (err) {
       console.error('Error selecting conversation phone number:', err);
       res.status(500).json({ error: 'Internal server error.' });
+    }
+  });
+
+  
+  router.get('/count', verifyToken, async (req, res) => {
+    try {
+      const phoneNumber = req.userId; // User's phone number from middleware
+  
+      const user = await User.findOne({ phoneNumber });
+      if (!user) return res.status(404).json({ error: 'User not found' });
+  
+      // Count all non-paused (active) conversations
+      const activeCount = await Conversation.countDocuments({ user: user._id, paused: false });
+  
+      res.json({ activeConversations: activeCount });
+  
+    } catch (err) {
+      console.error('Error fetching active conversation count:', err);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

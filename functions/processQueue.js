@@ -101,6 +101,13 @@ const processQueue = async () => {
           content: msg.messageBody,
         }));
 
+        if (conversation.initialPromt && conversation.initialPromt.trim() !== "") {
+            formattedMessages.unshift({
+              role: 'user',
+              content: conversation.initialPromt.trim(),
+            });
+          }
+
         if (conversation.llm === 'claude') {
           const anthropic = new Anthropic({ apiKey: aiConfig.apiKey });
           const response = await anthropic.messages.create({
