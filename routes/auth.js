@@ -85,6 +85,8 @@ router.post('/send', async function (req, res) {
       router.post('/verify', async (req, res) => {
         const { phoneNumber, verificationCode } = req.body;
 
+        console.log("Phone " + phoneNumber);
+
         if (!phoneNumber || !verificationCode) {
           return res.status(400).json({ message: 'Phone number and verification code are required.' });
         }
