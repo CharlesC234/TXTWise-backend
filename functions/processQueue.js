@@ -83,17 +83,17 @@ const processQueue = async () => {
 //
 ///
     if (isImageRequest) {
-        if (user.subscriptionStatus !== 'premium') {
-          await sendSms(
-            "Image generation is a subscription feature. Please upgrade your subscription at txtwise(io).",
-            job.to,
-            job.from
-          );
+        // if (user.subscriptionStatus !== 'premium') {
+        //   await sendSms(
+        //     "Image generation is a subscription feature. Please upgrade your subscription at txtwise(io).",
+        //     job.to,
+        //     job.from
+        //   );
       
-          job.status = 'completed';
-          await job.save();
-          continue; // Skip this job
-        }
+        //   job.status = 'completed';
+        //   await job.save();
+        //   continue; // Skip this job
+        // }
       
         const prompt = decryptedMessage.replace(/generate image:/i, '').trim();
         await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
