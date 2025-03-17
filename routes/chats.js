@@ -17,6 +17,22 @@ const CONVERSATION_NUMBERS = [
     process.env.SIGNALWIRE_PHONE_NUMBER_5,
   ];
 
+  // GET user's conversation by ID (ownership check)
+async function findUserConversation(req, res, next) {
+    const userId = req.userId;
+  
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid conversation ID' });
+    }
+  
+    const conversation = await Conversation.findOne({ _id: req.params.id, user: userId });
+  
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found or not authorized' });
+  
+    req.conversation = conversation; // Pass to next handler
+    next();
+  }
+
 /**
  * CREATE a new conversation
  */
@@ -102,7 +118,7 @@ router.post('/', verifyToken, async (req, res) => {
 /**
  * PAUSE a conversation (add paused flag)
  */
-router.put('/pause/:id', verifyToken, async function (req, res) {
+router.put('/pause/:id', verifyToken, findUserConversation, async function (req, res) {
   const conversation = await Conversation.findByIdAndUpdate(
     req.params.id,
     { $set: { paused: true } },
@@ -135,7 +151,7 @@ router.put('/pauseAll', verifyToken, async function (req, res) {
 /**
  * RESUME a paused conversation
  */
-router.put('/resume/:id', verifyToken, async function (req, res){
+router.put('/resume/:id', verifyToken, findUserConversation, async function (req, res){
   const conversation = await Conversation.findByIdAndUpdate(
     req.params.id,
     { $set: { paused: false } },
@@ -168,7 +184,7 @@ router.put('/resumeAll', verifyToken, async function (req, res) {
 /**
  * DELETE conversation by ID
  */
-router.delete('/:id', verifyToken, async function (req, res){
+router.delete('/:id', verifyToken, findUserConversation, async function (req, res){
   const conversation = await Conversation.findById(req.params.id);
 
   if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
@@ -219,7 +235,7 @@ router.delete('/deleteAll', verifyToken, async function (req, res) {
 /**
  * EDIT conversation (e.g., change users, update data)
  */
-router.put('/:id', verifyToken, async function (req, res){
+router.put('/:id', verifyToken, findUserConversation, async function (req, res){
   const { messages, LLM } = req.body;
 
   const conversation = await Conversation.findById(req.params.id);
