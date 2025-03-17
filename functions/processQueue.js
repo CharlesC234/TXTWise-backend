@@ -7,7 +7,6 @@ const MessageQueue = require('../models/queue');
 const sendSms = require('./sendSMS');
 const { logTokenUsage } = require('./logTokens');
 
-// SDK Imports
 const Anthropic = require('@anthropic-ai/sdk');
 const OpenAI = require('openai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -23,22 +22,10 @@ const AI_MAP = {
 };
 
 const imageKeywords = [
-    'generate image',
-    'generate an image',
-    'make me an image',
-    'create an image',
-    'show me an image',
-    'make image',
-    'show me',
-    'picture of',
-    'draw me',
-    'render an image',
-    'illustrate',
-    'make a picture',
-    'image of',
-    'can you draw',
-    'render this',
-  ];
+  'generate image', 'make me an image', 'create an image', 'show me an image',
+  'picture of', 'draw me', 'render an image', 'illustrate', 'make a picture',
+  'image of', 'can you draw', 'render this',
+];
 
 const processQueue = async () => {
   if (isProcessing) return;
@@ -66,19 +53,17 @@ const processQueue = async () => {
       const aiConfig = AI_MAP[conversation.llm];
       if (!aiConfig) throw new Error(`Invalid AI model: ${conversation.llm}`);
 
-      // ❗ Check dailyTokensRemaining BEFORE sending to AI
       if (user.subscriptionStatus === 'free' && user.dailyTokensRemaining <= 0) {
-        const limitMsg = `Daily token limit reached, you have used all 7,500 tokens for today. Tokens reset to 7,500 at midnight, or upgrade to unlimited at txtwise.io/pricing.`;
-        await sendSms(limitMsg, job.to, job.from);
+        await sendSms("Daily token limit reached. Reset at midnight or upgrade at txtwise.io/pricing.", job.to, job.from);
         job.status = 'completed';
         await job.save();
-        continue; // Skip to next job
+        continue;
       }
 
       const userMessage = await Message.create({
         conversationId: conversation._id,
         sender: user._id,
-        messageBody: job.messageBody,
+        messageBody: job.messageBody, // Will be encrypted on save
         isAI: false,
       });
 
@@ -87,111 +72,74 @@ const processQueue = async () => {
 
       let aiText = 'No response from AI.';
       let mediaUrl = null;
-
       const lowerMessage = job.messageBody.trim().toLowerCase();
-
-      // 📸 Detect Image Generation Request
       const isImageRequest = imageKeywords.some(keyword => lowerMessage.includes(keyword));
 
       if (isImageRequest) {
         const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
-
         const prompt = job.messageBody.replace(/generate image:/i, '').trim();
-
-          // 1. Immediately inform user
         await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
 
-        const imageResp = await openai.images.generate({
-          prompt,
-          n: 1,
-          size: '512x512',
-        });
-
+        const imageResp = await openai.images.generate({ prompt, n: 1, size: '512x512' });
         mediaUrl = imageResp.data[0]?.url;
         aiText = `Here is your generated image:`;
 
-        console.log("Generated image URL:", mediaUrl);
-
-        await logTokenUsage(user._id, conversation.llm, prompt); // Token log for image prompt
+        await logTokenUsage(user._id, conversation.llm, prompt, true);
       } else {
-        // Standard Text-based AI Handling
-        const fullHistory = await Message.find({ conversationId: conversation._id }).sort({ timestamp: 1 }).lean();
-        const formattedMessages = fullHistory.map(msg => ({
+        // 🔓 Decrypt all messages for context
+        const fullHistory = await Message.find({ conversationId: conversation._id }).sort({ timestamp: 1 });
+        const decryptedHistory = await Promise.all(fullHistory.map(async (msg) => ({
           role: msg.isAI ? 'assistant' : 'user',
-          content: msg.messageBody,
-        }));
+          content: msg.getDecryptedMessage(), // Custom decrypt method
+        })));
 
         if (conversation.initialPrompt && conversation.initialPrompt.trim() !== "") {
-            formattedMessages.unshift({
-              role: 'user',
-              content: conversation.initialPrompt.trim(),
-            });
-          }
+          decryptedHistory.unshift({ role: 'user', content: conversation.initialPrompt.trim() });
+        }
 
         if (conversation.llm === 'claude') {
           const anthropic = new Anthropic({ apiKey: aiConfig.apiKey });
           const response = await anthropic.messages.create({
             model: aiConfig.name,
             max_tokens: 1000,
-            messages: formattedMessages,
+            messages: decryptedHistory,
           });
           aiText = response?.content?.[0]?.text || 'No response from Claude.';
-          console.log("Claude Response:", response);
-
         } else if (conversation.llm === 'deepseek') {
           const openai = new OpenAI({ apiKey: aiConfig.apiKey, baseURL: 'https://api.deepseek.com' });
-          const response = await openai.chat.completions.create({
-            model: aiConfig.name,
-            messages: formattedMessages,
-          });
+          const response = await openai.chat.completions.create({ model: aiConfig.name, messages: decryptedHistory });
           aiText = response.choices?.[0]?.message?.content || 'No response from Deepseek.';
-          console.log("Deepseek Response:", response);
-
         } else if (conversation.llm === 'gemini') {
           const genAI = new GoogleGenerativeAI(aiConfig.apiKey);
           const model = genAI.getGenerativeModel({ model: aiConfig.name });
           const result = await model.generateContent(job.messageBody);
           aiText = await result.response.text();
-          console.log("Gemini Response:", aiText);
-
         } else {
-          const response = await axios.post(
-            aiConfig.url,
-            { model: aiConfig.name, messages: formattedMessages },
-            {
-              headers: {
-                'Authorization': `Bearer ${aiConfig.apiKey}`,
-                'Content-Type': 'application/json',
-              },
-            }
+          const response = await axios.post(aiConfig.url,
+            { model: aiConfig.name, messages: decryptedHistory },
+            { headers: { 'Authorization': `Bearer ${aiConfig.apiKey}`, 'Content-Type': 'application/json' } }
           );
           aiText = response.data.choices?.[0]?.message?.content || 'No response from AI.';
-          console.log("ChatGPT/Grok Response:", response.data);
         }
 
-        await logTokenUsage(user._id, conversation.llm, aiText, isImageRequest);
+        await logTokenUsage(user._id, conversation.llm, aiText, false);
       }
 
       if (!conversation.historyDisabled) {
-      // Save AI Message
-      const aiMessage = await Message.create({
-        conversationId: conversation._id,
-        sender: user._id,
-        messageBody: aiText,
-        isAI: true,
-      });
+        const aiMessage = await Message.create({
+          conversationId: conversation._id,
+          sender: user._id,
+          messageBody: aiText, // Encrypted automatically
+          isAI: true,
+        });
 
-      conversation.messages.push(aiMessage._id);
-      await conversation.save();
-    }
+        conversation.messages.push(aiMessage._id);
+        await conversation.save();
+      }
 
-      // 📲 Send via SMS/MMS (handle image)
       await sendSms(aiText, job.to, job.from, mediaUrl);
-      console.log(`Sent reply to ${job.from} using ${conversation.llm}: ${aiText}`);
-
       job.status = 'completed';
       await job.save();
-
     } catch (error) {
       console.error('Error processing message:', error);
       job.status = 'failed';

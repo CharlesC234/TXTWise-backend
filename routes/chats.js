@@ -394,19 +394,53 @@ router.get('/available-number', verifyToken, async (req, res) => {
 
 
 // GET /chat/:id (Secure Version)
+// GET /chat/:id (Secure Version with Decryption)
 router.get('/:id', verifyToken, async function (req, res) {
-  const phoneNumber = req.userId; // VerifyToken sets req.userId to phoneNumber
+    const phoneNumber = req.userId; // VerifyToken sets req.userId to phoneNumber
+  
+    const user = await User.findOne({ phoneNumber });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+  
+    const conversation = await Conversation.findOne({ _id: req.params.id, user: user._id })
+      .populate('user', 'name phoneNumber')
+      .populate('messages') // Messages will still have encrypted bodies
+      .exec();
+  
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found or unauthorized' });
+  
+    // Decrypt each message body
+    const decryptedMessages = await Promise.all(conversation.messages.map(async (msg) => {
+      // Re-fetch the message to access schema methods
+      const fullMessage = await Message.findById(msg._id);
+      const decryptedBody = fullMessage.getDecryptedMessage();
+      return {
+        _id: msg._id,
+        conversationId: msg.conversationId,
+        sender: msg.sender,
+        messageBody: decryptedBody,
+        timestamp: msg.timestamp,
+        isAI: msg.isAI,
+      };
+    }));
+  
+    const response = {
+      _id: conversation._id,
+      user: conversation.user,
+      fromPhone: conversation.fromPhone,
+      llm: conversation.llm,
+      initialPrompt: conversation.initialPrompt,
+      name: conversation.name,
+      historyDisabled: conversation.historyDisabled,
+      paused: conversation.paused,
+      updatedAt: conversation.updatedAt,
+      createdAt: conversation.createdAt,
+      messages: decryptedMessages,
+    };
+  
+    res.status(200).json(response);
+  });
 
-  const user = await User.findOne({ phoneNumber });
-  if (!user) return res.status(404).json({ message: 'User not found' });
 
-  const conversation = await Conversation.findOne({ _id: req.params.id, user: user._id })
-    .populate('user', 'name phoneNumber')
-    .populate('messages')
-    .exec();
+  
 
-  if (!conversation) return res.status(404).json({ message: 'Conversation not found or unauthorized' });
-
-  res.status(200).json(conversation);
-});
 module.exports = router;
