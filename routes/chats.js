@@ -22,72 +22,80 @@ const CONVERSATION_NUMBERS = [
  */
 router.post('/', verifyToken, async (req, res) => {
     try {
-        const { phoneNumber, LLM, initialPrompt, fromPhone, chatName } = req.body;
-
-        if (!phoneNumber || !LLM || !fromPhone) {
-          return res.status(400).json({ error: "Missing required fields: phoneNumber, LLM, fromPhone" });
-        }        
-
-      // Find user by phone number
+      const { phoneNumber, LLM, initialPrompt, fromPhone, chatName } = req.body;
+  
+      if (!phoneNumber || !LLM || !fromPhone) {
+        return res.status(400).json({ error: "Missing required fields: phoneNumber, LLM, fromPhone" });
+      }
+  
+      // 🔍 Find user by phone number
       const user = await User.findOne({ phoneNumber });
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-
+  
       const userId = user._id;
   
-      // Create a new conversation
+      // 🔎 Count user's active conversations
+      const existingConversations = await Conversation.find({ user: userId });
+      const userConvoCount = existingConversations.length;
+  
+      // ✅ Subscription limit enforcement
+      const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
+      if (userConvoCount >= maxConvosAllowed) {
+        return res.status(403).json({ error: `Conversation limit reached. Max allowed: ${maxConvosAllowed}` });
+      }
+  
+      // ✅ Create new conversation
       const conversation = new Conversation({
         user: userId,
         llm: LLM.toLowerCase(),
-        name: chatName,
+        name: chatName || LLM, // Default to LLM name if no chatName provided
         fromPhone,
-        initialPrompt: initialPrompt || "",
+        initialPrompt: initialPrompt?.trim() || "",
         messages: [],
       });
-      
   
-      // Save conversation to DB
       const savedConversation = await conversation.save();
   
-      // Link conversation to user
+      // ✅ Link to user
       await User.updateOne(
         { _id: userId },
         { $push: { conversations: savedConversation._id } }
       );
-
-      // **Send a Welcome Message via Twilio**
+  
+      // 📲 Send welcome SMS
       const welcomeMessage = `
-        Welcome to TXTWise! 🎉
-        
-        You are now chatting with ${LLM}. To start, just send a message.
-
-        📌 *How to use this chat*:
-        - Send any message to start the conversation.
-        - If you provided an initial prompt, the chatbot will respond accordingly.
-        - Switch models at any time by typing: "CHATGPT", "GROK", "GEMINI", "DEEPSEEK", or "CLAUDE"
-
-        ❌ To opt out, reply with *STOP*.
-        🔄 To restart a chat, reply with *RESET*.
-        🛠️ Need help? Reply with *HELP*.
-
-        Happy chatting!
-      `;
-
+  Welcome to TXTWise! 🎉
+  
+  You are now chatting with ${LLM}. To start, just send a message.
+  
+  📌 *How to use this chat*:
+  - Send any message to start the conversation.
+  - If you provided an initial prompt, the chatbot will respond accordingly.
+  - Switch models at any time by typing: "CHATGPT", "GROK", "GEMINI", "DEEPSEEK", or "CLAUDE"
+  
+  ❌ To opt out, reply with *STOP*.
+  🔄 To restart a chat, reply with *RESET*.
+  🛠️ Need help? Reply with *HELP*.
+  
+  Happy chatting!
+  `;
+  
       await sendSms(
         welcomeMessage,
-        fromPhone, // Use fromPhone here
+        fromPhone,
         phoneNumber
       );
-      
-      
-
+  
       res.status(201).json(savedConversation);
+  
     } catch (error) {
       console.error("Error creating conversation:", error);
       res.status(500).json({ error: "Internal Server Error" });
     }
-});
+  });
+  
 
 
 
