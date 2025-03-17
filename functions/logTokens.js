@@ -1,21 +1,20 @@
-// Updated logTokenUsage function
-const TokenUsage = require('../models/tokens'); // Assuming path
+const TokenUsage = require('../models/tokens');
 const User = require('../models/user');
 
 async function logTokenUsage(userId, modelName, messageText, isImage) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const now = new Date();
+  now.setMinutes(0, 0, 0); // Normalize to start of the hour
+  const usageDate = new Date(now);
 
-  // Estimate tokens used (basic heuristic: 1 token per 4 characters)
+  // Estimate tokens used (simple heuristic)
   let estimatedTokens = Math.ceil(messageText.length / 4);
-
-  if(isImage){
-    estimatedTokens = 150;
+  if (isImage) {
+    estimatedTokens = 150; // Flat token cost for image gen
   }
 
-  // Update TokenUsage collection
+  // Update TokenUsage collection for the correct hour
   await TokenUsage.findOneAndUpdate(
-    { user: userId, model: modelName, date: today },
+    { user: userId, model: modelName, date: usageDate },
     { $inc: { tokensUsed: estimatedTokens } },
     { upsert: true, new: true }
   );

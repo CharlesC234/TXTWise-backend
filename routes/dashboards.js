@@ -18,7 +18,7 @@ const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, ne
 
 router.get('/token-usage', verifyToken, async (req, res) => {
     try {
-      const phoneNumber = req.userId; // From verifyToken
+      const phoneNumber = req.userId; // From verifyToken middleware
       const user = await User.findOne({ phoneNumber });
       if (!user) return res.status(404).json({ error: 'User not found' });
   
@@ -34,9 +34,9 @@ router.get('/token-usage', verifyToken, async (req, res) => {
       let categories = [];
   
       if (timeframe === 'today') {
-        // Handle hourly breakdown for past 24 hours ending at current hour
+        // 📅 Hourly breakdown for past 24 hours (ends at current hour)
         const now = new Date();
-        now.setMinutes(0, 0, 0); // Round to current hour
+        now.setMinutes(0, 0, 0); // Round to start of current hour
         const startHour = new Date(now);
         startHour.setHours(now.getHours() - 23); // Past 24 hours
   
@@ -66,9 +66,10 @@ router.get('/token-usage', verifyToken, async (req, res) => {
         });
   
       } else {
-        // Handle daily breakdown for week/month/year
-        let startDate = new Date();
-        startDate.setHours(0, 0, 0, 0); // Start of day
+        // 📅 Daily breakdown for week, month, or year
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+        const startDate = new Date(today);
   
         switch (timeframe) {
           case 'month':
@@ -79,7 +80,7 @@ router.get('/token-usage', verifyToken, async (req, res) => {
             break;
           case 'week':
           default:
-            startDate.setDate(startDate.getDate() - 6);
+            startDate.setDate(startDate.getDate() - 6); // Past 7 days
             break;
         }
   
@@ -89,15 +90,14 @@ router.get('/token-usage', verifyToken, async (req, res) => {
         }).lean();
   
         const tempDate = new Date(startDate);
-        const today = new Date();
         while (tempDate <= today) {
-          const formattedDate = tempDate.toISOString().slice(0, 10);
+          const dateISO = tempDate.toISOString().slice(0, 10); // e.g., "2025-03-09"
           categories.push(tempDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
   
           for (const model in usageByModel) {
             const record = usageRecords.find(r =>
               r.model === model &&
-              r.date.toISOString().slice(0, 10) === formattedDate
+              r.date.toISOString().slice(0, 10) === dateISO
             );
             usageByModel[model].push(record ? record.tokensUsed : 0);
           }
@@ -119,8 +119,6 @@ router.get('/token-usage', verifyToken, async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
     }
   });
-  
-  
 
   
 
