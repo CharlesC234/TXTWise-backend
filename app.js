@@ -51,7 +51,7 @@ app.use(
 
 app.use(cookieParser());
 
-app.use('/stripe', require('./routes/stripe')); 
+app.use('/stripe', stripeRoutes);
 
 app.use(express.json());
 
