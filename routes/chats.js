@@ -17,9 +17,16 @@ const CONVERSATION_NUMBERS = [
     process.env.SIGNALWIRE_PHONE_NUMBER_5,
   ];
 
+  const getUserByPhone = async (phoneNumber) => {
+    const user = await User.findOne({ phoneNumber });
+    if (!user) throw new Error('User not found');
+    return user;
+  };
+
   // GET user's conversation by ID (ownership check)
 async function findUserConversation(req, res, next) {
-    const userId = req.userId;
+    const user = await getUserByPhone(req.userId);
+    const userId = user._id;
   
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid conversation ID' });
@@ -111,6 +118,37 @@ router.post('/', verifyToken, async (req, res) => {
       res.status(500).json({ error: "Internal Server Error" });
     }
   });
+
+
+  
+  router.post('/ping/:id', verifyToken, async (req, res) => {
+    try {
+      const phoneNumber = req.userId; // Phone number from token
+      const user = await User.findOne({ phoneNumber });
+      if (!user) return res.status(404).json({ message: 'User not found' });
+  
+      const conversation = await Conversation.findOne({ _id: req.params.id, user: user._id });
+      if (!conversation) return res.status(404).json({ message: 'Conversation not found or unauthorized' });
+  
+      // Construct Ping Message (similar to Welcome Message)
+      const pingMessage = `
+  🔔 Ping from TXTWise:
+  
+  You're chatting with *${conversation.llm.toUpperCase()}*. Send a message anytime.
+  
+  💡 Need help? Reply with *HELP*.
+  ❌ To opt out, reply with *STOP*.
+  🔄 To restart chat, reply *RESET*.
+  `;
+  
+      await sendSms(pingMessage, conversation.fromPhone, phoneNumber);
+      res.status(200).json({ message: 'Ping sent successfully.' });
+    } catch (err) {
+      console.error('Ping chat error:', err);
+      res.status(500).json({ message: 'Error sending ping.', error: err.message });
+    }
+  });
+
   
 
 
@@ -135,7 +173,8 @@ router.put('/pause/:id', verifyToken, findUserConversation, async function (req,
  */
 router.put('/pauseAll', verifyToken, async function (req, res) {
     try {
-      const userId = req.userId; // From verifyToken
+      const user = await getUserByPhone(req.userId);
+      const userId = user._id; // From verifyToken
   
       await Conversation.updateMany(
         { user: userId }, // Filter conversations by user
@@ -168,7 +207,8 @@ router.put('/resume/:id', verifyToken, findUserConversation, async function (req
  */
 router.put('/resumeAll', verifyToken, async function (req, res) {
     try {
-      const userId = req.userId;
+      const user = await getUserByPhone(req.userId);
+      const userId = user._id;
   
       await Conversation.updateMany(
         { user: userId }, 
@@ -209,7 +249,8 @@ router.delete('/:id', verifyToken, findUserConversation, async function (req, re
  */
 router.delete('/deleteAll', verifyToken, async function (req, res) {
     try {
-      const userId = req.userId;
+      const user = await getUserByPhone(req.userId);
+      const userId = user._id;
   
       // Find all conversations for the user
       const userConversations = await Conversation.find({ user: userId });
@@ -236,13 +277,14 @@ router.delete('/deleteAll', verifyToken, async function (req, res) {
  * EDIT conversation (e.g., change users, update data)
  */
 router.put('/:id', verifyToken, findUserConversation, async function (req, res){
-  const { messages, LLM } = req.body;
+  const {name, LLM } = req.body;
+  const phoneNumber = req.userId;
 
   const conversation = await Conversation.findById(req.params.id);
   if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
 
   if (LLM) conversation.llm = LLM;
-  if (messages) conversation.messages = messages;
+  if (name) conversation.name = name;
 
   conversation.updatedAt = new Date();
 
