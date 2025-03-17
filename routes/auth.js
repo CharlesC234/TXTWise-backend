@@ -46,33 +46,42 @@ router.get('/validate', async (req, res) => {
 
 
 
-router.post(
-    '/send', async function (req, res){
-      const { phoneNumber } = req.body;
-  
-      if (!phoneNumber) {
-        return res.status(400).json({ message: 'Phone number required.' });
-      }
+router.post('/send', async function (req, res) {
+  const { phoneNumber } = req.body;
 
-      // Generate a 6-digit verification code
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  
-      // Save phone number and verification code temporarily in Redis
-      await tempClient.saveTemporarySignupData(phoneNumber, verificationCode);
-  
-      const response = await sendSms(
-        `Your TXTWise verification code is: ${verificationCode}`,
-        process.env.SIGNALWIRE_PHONE_NUMBER,
-        phoneNumber
-      );
-    
-      if (!response.success) {
-        return res.status(500).json({ message: response.message });
-      }
-  
-      res.status(200).json({ message: 'Verification code sent to phone number.' });
-    
-    });
+  if (!phoneNumber) {
+    return res.status(400).json({ message: 'Phone number required.' });
+  }
+
+  // Generate a 6-digit verification code
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Save phone number and verification code temporarily in Redis
+  await tempClient.saveTemporarySignupData(phoneNumber, verificationCode);
+
+  // Get the two dedicated auth numbers
+  const authNumbers = [
+    process.env.SIGNALWIRE_PHONE_NUMBER_AUTH6,
+    process.env.SIGNALWIRE_PHONE_NUMBER_AUTH7
+  ];
+
+  // Randomly select one of the two numbers
+  const selectedAuthNumber = authNumbers[Math.floor(Math.random() * authNumbers.length)];
+
+  // Send the SMS using the selected number
+  const response = await sendSms(
+    `Your TXTWise verification code is: ${verificationCode}`,
+    selectedAuthNumber,  // Use selected auth number here
+    phoneNumber
+  );
+
+  if (!response.success) {
+    return res.status(500).json({ message: response.message });
+  }
+
+  res.status(200).json({ message: 'Verification code sent to phone number.' });
+});
+
 
 
       // Verify Route
