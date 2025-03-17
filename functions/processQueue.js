@@ -42,7 +42,9 @@ const processQueue = async () => {
     if (!job) break;
 
     try {
-      console.log(`Processing message from ${job.from} to ${job.to}: ${job.messageBody}`);
+        const decryptedMessage = job.getDecryptedMessage();
+        console.log(`Processing message from ${job.from} to ${job.to}: ${decryptedMessage}`);
+        
 
       const user = await User.findOne({ phoneNumber: job.from });
       if (!user) throw new Error("User not found");
@@ -63,7 +65,7 @@ const processQueue = async () => {
       const userMessage = await Message.create({
         conversationId: conversation._id,
         sender: user._id,
-        messageBody: job.messageBody, // Will be encrypted on save
+        messageBody: decryptedMessage, // ✅ decrypted here, model will encrypt
         isAI: false,
       });
 
@@ -72,20 +74,17 @@ const processQueue = async () => {
 
       let aiText = 'No response from AI.';
       let mediaUrl = null;
-      const lowerMessage = job.messageBody.trim().toLowerCase();
-      const isImageRequest = imageKeywords.some(keyword => lowerMessage.includes(keyword));
+      const lowerMessage = decryptedMessage.trim().toLowerCase();
+    const isImageRequest = imageKeywords.some(keyword => lowerMessage.includes(keyword));
 
-      if (isImageRequest) {
-        const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
-        const prompt = job.messageBody.replace(/generate image:/i, '').trim();
-        await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
-
-        const imageResp = await openai.images.generate({ prompt, n: 1, size: '512x512' });
-        mediaUrl = imageResp.data[0]?.url;
-        aiText = `Here is your generated image:`;
-
-        await logTokenUsage(user._id, conversation.llm, prompt, true);
-      } else {
+    if (isImageRequest) {
+    const prompt = decryptedMessage.replace(/generate image:/i, '').trim();
+    await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
+    const imageResp = await openai.images.generate({ prompt, n: 1, size: '512x512' });
+    mediaUrl = imageResp.data[0]?.url;
+    aiText = `Here is your generated image:`;
+    await logTokenUsage(user._id, conversation.llm, prompt, true);
+    } else {
         // 🔓 Decrypt all messages for context
         const fullHistory = await Message.find({ conversationId: conversation._id }).sort({ timestamp: 1 });
         const decryptedHistory = await Promise.all(fullHistory.map(async (msg) => ({
@@ -112,7 +111,8 @@ const processQueue = async () => {
         } else if (conversation.llm === 'gemini') {
           const genAI = new GoogleGenerativeAI(aiConfig.apiKey);
           const model = genAI.getGenerativeModel({ model: aiConfig.name });
-          const result = await model.generateContent(job.messageBody);
+          const result = await model.generateContent(decryptedMessage); // ✅ decrypted
+
           aiText = await result.response.text();
         } else {
           const response = await axios.post(aiConfig.url,
