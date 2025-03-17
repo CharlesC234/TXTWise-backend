@@ -259,7 +259,7 @@ router.delete('/:id', verifyToken, findUserConversation, async function (req, re
       { $pull: { conversations: conversation._id } }
     );
   
-    await conversation.remove();
+    await conversation.deleteOne();
   
     res.status(200).json({ message: 'Conversation deleted' });
   });
