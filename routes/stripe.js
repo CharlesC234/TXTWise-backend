@@ -9,7 +9,7 @@ const router = express.Router();
 // Stripe Webhook Secret (set in your Stripe Dashboard)
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-app.post('/create-checkout-session', async (req, res) => {
+router.post('/create-checkout-session', async (req, res) => {
   const { userId, planType } = req.body; // From frontend
 
   const session = await stripe.checkout.sessions.create({
