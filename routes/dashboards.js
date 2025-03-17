@@ -154,6 +154,7 @@ router.get(
       initialPrompt: conv.initialPrompt,
       name: conv.name,
       phone: conv.fromPhone,
+      history: conv.historyDisabled,
     }));
 
     res.status(200).json({
