@@ -88,6 +88,8 @@ const processQueue = async () => {
       let aiText = 'No response from AI.';
       let mediaUrl = null;
 
+      const lowerMessage = job.messageBody.trim().toLowerCase();
+
       // 📸 Detect Image Generation Request
       const isImageRequest = imageKeywords.some(keyword => lowerMessage.includes(keyword));
 
