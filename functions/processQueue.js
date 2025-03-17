@@ -22,6 +22,24 @@ const AI_MAP = {
   grok: { name: 'grok-2-latest', apiKey: process.env.GROK_API_KEY, url: 'https://api.x.ai/v1/chat/completions' },
 };
 
+const imageKeywords = [
+    'generate image',
+    'generate an image',
+    'make me an image',
+    'create an image',
+    'show me an image',
+    'make image',
+    'show me',
+    'picture of',
+    'draw me',
+    'render an image',
+    'illustrate',
+    'make a picture',
+    'image of',
+    'can you draw',
+    'render this',
+  ];
+
 const processQueue = async () => {
   if (isProcessing) return;
   isProcessing = true;
@@ -70,20 +88,36 @@ const processQueue = async () => {
       let aiText = 'No response from AI.';
       let mediaUrl = null;
 
-      let isImageRequest = false;
-      let imagePrompt = '';
+      // 📸 Detect Image Generation Request
+      const isImageRequest = imageKeywords.some(keyword => lowerMessage.includes(keyword));
 
+      if (isImageRequest) {
+        const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
+
+        const prompt = job.messageBody.replace(/generate image:/i, '').trim();
+
+          // 1. Immediately inform user
+        await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
+
+        const imageResp = await openai.images.generate({
+          prompt,
+          n: 1,
+          size: '512x512',
+        });
+
+        mediaUrl = imageResp.data[0]?.url;
+        aiText = `Here is your generated image:`;
+
+        console.log("Generated image URL:", mediaUrl);
+
+        await logTokenUsage(user._id, conversation.llm, prompt); // Token log for image prompt
+      } else {
         // Standard Text-based AI Handling
         const fullHistory = await Message.find({ conversationId: conversation._id }).sort({ timestamp: 1 }).lean();
         const formattedMessages = fullHistory.map(msg => ({
           role: msg.isAI ? 'assistant' : 'user',
           content: msg.messageBody,
         }));
-
-        formattedMessages.unshift({
-            role: 'system',
-            content: `You are a helpful assistant. If the user requests an image in any way (e.g., 'generate me an image...', 'make an image...', 'show me...'), respond only with: IMAGE GEN prompt: <description>. Otherwise, give a normal reply.`,
-          });
 
         if (conversation.initialPrompt && conversation.initialPrompt.trim() !== "") {
             formattedMessages.unshift({
@@ -134,40 +168,7 @@ const processQueue = async () => {
         }
 
         await logTokenUsage(user._id, conversation.llm, aiText, isImageRequest);
-
-
-        console.log(aiText);
-      
-
-      if (aiText.toLowerCase().startsWith("image gen prompt:")) {
-        isImageRequest = true;
-        imagePrompt = aiText.replace(/image gen prompt:/i, '').trim();
       }
-
-      console.log(isImageRequest);
-
-      if (isImageRequest) {
-        const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
-
-        const prompt = imagePrompt;
-
-          // 1. Immediately inform user
-        await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
-
-        const imageResp = await openai.images.generate({
-          prompt,
-          n: 1,
-          size: '512x512',
-        });
-
-        mediaUrl = imageResp.data[0]?.url;
-        aiText = `Here is your generated image:`;
-
-        console.log("Generated image URL:", mediaUrl);
-
-        await logTokenUsage(user._id, conversation.llm, prompt); // Token log for image prompt
-      }
-
 
       if (!conversation.historyDisabled) {
       // Save AI Message
@@ -180,7 +181,7 @@ const processQueue = async () => {
 
       conversation.messages.push(aiMessage._id);
       await conversation.save();
-      }
+    }
 
       // 📲 Send via SMS/MMS (handle image)
       await sendSms(aiText, job.to, job.from, mediaUrl);
