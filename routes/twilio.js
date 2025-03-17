@@ -43,6 +43,10 @@ router.post('/webhook', async (req, res) => {
         return res.status(200).send('<Response></Response>'); // Stop further processing
     }
 
+    if(conversation.paused){
+        return res.status(200).send('<Response></Response>'); // Stop further processing
+    }
+
     const messageNonCase = incomingMessage.toUpperCase(); // For keyword checks only
 
     // Handle **Special Keywords** for user account info
