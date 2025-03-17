@@ -70,36 +70,20 @@ const processQueue = async () => {
       let aiText = 'No response from AI.';
       let mediaUrl = null;
 
-      // 📸 Detect Image Generation Request
-      const isImageRequest = job.messageBody.trim().toLowerCase().startsWith("generate image:");
+      let isImageRequest = false;
+      let imagePrompt = '';
 
-      if (isImageRequest) {
-        const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
-
-        const prompt = job.messageBody.replace(/generate image:/i, '').trim();
-
-          // 1. Immediately inform user
-        await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
-
-        const imageResp = await openai.images.generate({
-          prompt,
-          n: 1,
-          size: '512x512',
-        });
-
-        mediaUrl = imageResp.data[0]?.url;
-        aiText = `Here is your generated image:`;
-
-        console.log("Generated image URL:", mediaUrl);
-
-        await logTokenUsage(user._id, conversation.llm, prompt); // Token log for image prompt
-      } else {
         // Standard Text-based AI Handling
         const fullHistory = await Message.find({ conversationId: conversation._id }).sort({ timestamp: 1 }).lean();
         const formattedMessages = fullHistory.map(msg => ({
           role: msg.isAI ? 'assistant' : 'user',
           content: msg.messageBody,
         }));
+
+        formattedMessages.unshift({
+            role: 'system',
+            content: `You are a helpful assistant. If the user requests an image in any way (e.g., 'generate me an image...', 'make an image...', 'show me...'), respond only with: IMAGE GEN prompt: <description>. Otherwise, give a normal reply.`,
+          });
 
         if (conversation.initialPrompt && conversation.initialPrompt.trim() !== "") {
             formattedMessages.unshift({
@@ -150,7 +134,36 @@ const processQueue = async () => {
         }
 
         await logTokenUsage(user._id, conversation.llm, aiText, isImageRequest);
+      
+
+      if (aiText.toLowerCase().startsWith("image gen prompt:")) {
+        isImageRequest = true;
+        imagePrompt = aiText.replace(/image gen prompt:/i, '').trim();
       }
+
+
+      if (isImageRequest) {
+        const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
+
+        const prompt = imagePrompt;
+
+          // 1. Immediately inform user
+        await sendSms("Generating your image... This may take a few minutes.", job.to, job.from);
+
+        const imageResp = await openai.images.generate({
+          prompt,
+          n: 1,
+          size: '512x512',
+        });
+
+        mediaUrl = imageResp.data[0]?.url;
+        aiText = `Here is your generated image:`;
+
+        console.log("Generated image URL:", mediaUrl);
+
+        await logTokenUsage(user._id, conversation.llm, prompt); // Token log for image prompt
+      }
+
 
       if (!conversation.historyDisabled) {
       // Save AI Message
