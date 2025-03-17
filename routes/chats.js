@@ -295,13 +295,13 @@ router.delete('/deleteAll', verifyToken, async function (req, res) {
  * EDIT conversation (e.g., change users, update data)
  */
 router.put('/:id', verifyToken, findUserConversation, async function (req, res){
-    const { chatName, LLM, initialPrompt, historyDisabled } = req.body;
+    const { chatName, llm, initialPrompt, historyDisabled } = req.body;
     const phoneNumber = req.userId;
   
     const conversation = await Conversation.findById(req.params.id);
     if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
   
-    if (LLM) conversation.llm = LLM;
+    if (LLM) conversation.llm = llm;
     if (chatName) conversation.name = chatName;
     if (initialPrompt) conversation.initialPrompt = initialPrompt;
     if (typeof historyDisabled === 'boolean') conversation.historyDisabled = historyDisabled; 
