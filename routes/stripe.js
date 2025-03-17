@@ -9,6 +9,29 @@ const router = express.Router();
 // Stripe Webhook Secret (set in your Stripe Dashboard)
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+app.post('/create-checkout-session', async (req, res) => {
+  const { userId, planType } = req.body; // From frontend
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    payment_method_types: ['card', 'afterpay_clearpay'],
+    line_items: [
+      {
+        price: process.env.PRICE_ID, // Monthly or yearly price ID
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      userId,       // 👈 REQUIRED for your webhook to find the user
+      planType,     // 👈 'monthly' or 'yearly' — used for Subscription model
+    },
+    success_url: 'https://txtwise.io/dashboard',
+    cancel_url: 'https://txtwise.io/dashboard',
+  });
+
+  res.json({ sessionId: session.id });
+});
+
 // Middleware: Raw body parser for Stripe Webhook
 router.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
