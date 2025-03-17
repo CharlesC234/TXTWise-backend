@@ -17,21 +17,6 @@ const CONVERSATION_NUMBERS = [
     process.env.SIGNALWIRE_PHONE_NUMBER_5,
   ];
 
-
-/**
- * GET conversation by ID (including messages and users)
- */
-router.get('/:id', verifyToken, async function (req, res){
-  const conversation = await Conversation.findById(req.params.id)
-    .populate('user', 'name phoneNumber')
-    .populate('messages')
-    .exec();
-
-  if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
-
-  res.status(200).json(conversation);
-});
-
 /**
  * CREATE a new conversation
  */
@@ -297,7 +282,7 @@ router.get('/available-number', verifyToken, async (req, res) => {
     }
   });
 
-  
+
   router.get('/count', verifyToken, async (req, res) => {
     try {
       const phoneNumber = req.userId; // User's phone number from middleware
@@ -316,5 +301,19 @@ router.get('/available-number', verifyToken, async (req, res) => {
     }
   });
 
+
+  /**
+ * GET conversation by ID (including messages and users)
+ */
+router.get('/:id', verifyToken, async function (req, res){
+    const conversation = await Conversation.findById(req.params.id)
+      .populate('user', 'name phoneNumber')
+      .populate('messages')
+      .exec();
+  
+    if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
+  
+    res.status(200).json(conversation);
+  });
 
 module.exports = router;
