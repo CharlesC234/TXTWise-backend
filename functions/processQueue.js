@@ -134,6 +134,9 @@ const processQueue = async () => {
         }
 
         await logTokenUsage(user._id, conversation.llm, aiText, isImageRequest);
+
+
+        console.log(aiText);
       
 
       if (aiText.toLowerCase().startsWith("image gen prompt:")) {
@@ -141,6 +144,7 @@ const processQueue = async () => {
         imagePrompt = aiText.replace(/image gen prompt:/i, '').trim();
       }
 
+      console.log(isImageRequest);
 
       if (isImageRequest) {
         const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
