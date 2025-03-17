@@ -35,6 +35,7 @@ router.get('/validate', async (req, res) => {
               return res.status(401).json({ message: 'Unauthorized: User not found' });
           }
 
+          console.log("authenticated");
           res.status(200).json({ authenticated: true, user });
       });
   } catch (error) {

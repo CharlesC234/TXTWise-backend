@@ -16,6 +16,8 @@ const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, ne
 
 
 router.get('/token-usage', verifyToken, async (req, res) => {
+
+    console.log("Token-usage, verified token");
     try {
       const phoneNumber = req.userId; 
       const user = await User.findOne({ phoneNumber });
