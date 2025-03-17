@@ -51,12 +51,13 @@ app.use(
 
 app.use(cookieParser());
 
+app.use('/stripe', require('./routes/stripe')); 
+
 app.use(express.json());
 
 app.use('/auth', authRoutes);
 app.use('/chat', chatsRoutes);
 app.use('/dashboard', dashboardsRoutes);
-app.use('/stripe', stripeRoutes);
 app.use('/twilio', twilioRoutes);
 
 
