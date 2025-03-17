@@ -53,7 +53,7 @@ router.post('/webhook', async (req, res) => {
             return res.status(200).send('<Response></Response>');
 
         case "HELP":
-            const helpMessage = `You have replied “HELP”\n\nReply with STOP, CANCEL, END, QUIT, UNSUBSCRIBE, or STOPALL to opt out.\nMsg & Data Rates May Apply.\n\nTo manage your account, visit txtwise(io)\nTo switch AI models, text: "CHATGPT", "GEMINI", "DEEPSEEK", "GROK", "CLAUDE".\nTo delete your account, go to Settings > Pause or Delete Account.\nNeed help? Contact us at txtwiseio@gmail.com.\n\nTXTWise by Launchwards, LLC\n7661 Canterbury Cir, Lakeland, FL`;
+            const helpMessage = `You have replied “HELP”\n\nReply with STOP, CANCEL, END, QUIT, UNSUBSCRIBE, or STOPALL to opt out.\nMsg & Data Rates May Apply.\n\nTo manage your account, visit txtwise(io)\nTo switch AI models, text: "CHATGPT", "GEMINI", "DEEPSEEK", "GROK", "CLAUDE".\nTo delete your account, go to txtwise(io), and click your phone number in the top right corner, then hit "Fully Delete Account".\nNeed help? Contact us at txtwiseio@gmail.com.\n\nTXTWise by Launchwards, LLC\n Lakeland, FL`;
             await sendSms(helpMessage, to, from);
             return res.status(200).send('<Response></Response>');
 

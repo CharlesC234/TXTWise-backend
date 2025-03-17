@@ -152,6 +152,7 @@ const processQueue = async () => {
         await logTokenUsage(user._id, conversation.llm, aiText, isImageRequest);
       }
 
+      if (!conversation.historyDisabled) {
       // Save AI Message
       const aiMessage = await Message.create({
         conversationId: conversation._id,
@@ -162,6 +163,7 @@ const processQueue = async () => {
 
       conversation.messages.push(aiMessage._id);
       await conversation.save();
+      }
 
       // 📲 Send via SMS/MMS (handle image)
       await sendSms(aiText, job.to, job.from, mediaUrl);

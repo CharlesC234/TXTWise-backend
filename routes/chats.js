@@ -55,7 +55,7 @@ async function findUserConversation(req, res, next) {
  */
 router.post('/', verifyToken, async (req, res) => {
     try {
-      const { phoneNumber, LLM, initialPrompt, fromPhone, chatName } = req.body;
+        const { phoneNumber, LLM, initialPrompt, fromPhone, chatName, historyDisabled } = req.body;
   
       if (!phoneNumber || !LLM || !fromPhone) {
         return res.status(400).json({ error: "Missing required fields: phoneNumber, LLM, fromPhone" });
@@ -83,10 +83,11 @@ router.post('/', verifyToken, async (req, res) => {
       const conversation = new Conversation({
         user: userId,
         llm: LLM.toLowerCase(),
-        name: chatName || LLM, // Default to LLM name if no chatName provided
+        name: chatName || LLM,
         fromPhone,
         initialPrompt: initialPrompt?.trim() || "",
         messages: [],
+        historyDisabled: historyDisabled || false // 🔥 New
       });
   
       const savedConversation = await conversation.save();
@@ -297,7 +298,7 @@ router.delete('/deleteAll', verifyToken, async function (req, res) {
  * EDIT conversation (e.g., change users, update data)
  */
 router.put('/:id', verifyToken, findUserConversation, async function (req, res){
-    const { chatName, LLM, initialPrompt } = req.body;
+    const { chatName, LLM, initialPrompt, historyDisabled } = req.body;
     const phoneNumber = req.userId;
   
     const conversation = await Conversation.findById(req.params.id);
@@ -306,6 +307,7 @@ router.put('/:id', verifyToken, findUserConversation, async function (req, res){
     if (LLM) conversation.llm = LLM;
     if (chatName) conversation.name = chatName;
     if (initialPrompt) conversation.initialPrompt = initialPrompt;
+    if (typeof historyDisabled === 'boolean') conversation.historyDisabled = historyDisabled; 
   
     conversation.updatedAt = new Date();
     const updatedConversation = await conversation.save();
