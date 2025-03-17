@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { encrypt, decrypt } = require('../utils/encryption');
+const { encrypt, decrypt } = require('../functions/encryption');
 
 const MessageSchema = new mongoose.Schema({
   conversationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation', required: true },

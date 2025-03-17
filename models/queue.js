@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { encrypt, decrypt } = require('../utils/encryption');
+const { encrypt, decrypt } = require('../functions/encryption');
 
 const messageQueueSchema = new mongoose.Schema({
   from: String,
