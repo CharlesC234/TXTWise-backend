@@ -101,10 +101,10 @@ const processQueue = async () => {
           content: msg.messageBody,
         }));
 
-        if (conversation.initialPromt && conversation.initialPromt.trim() !== "") {
+        if (conversation.initialPrompt && conversation.initialPrompt.trim() !== "") {
             formattedMessages.unshift({
               role: 'user',
-              content: conversation.initialPromt.trim(),
+              content: conversation.initialPrompt.trim(),
             });
           }
 

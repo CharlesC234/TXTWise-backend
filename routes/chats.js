@@ -277,14 +277,15 @@ router.delete('/deleteAll', verifyToken, async function (req, res) {
  * EDIT conversation (e.g., change users, update data)
  */
 router.put('/:id', verifyToken, findUserConversation, async function (req, res){
-  const {name, LLM } = req.body;
+  const {chatName, LLM, initialPrompt } = req.body;
   const phoneNumber = req.userId;
 
   const conversation = await Conversation.findById(req.params.id);
   if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
 
   if (LLM) conversation.llm = LLM;
-  if (name) conversation.name = name;
+  if (chatName) conversation.name = chatName;
+  if (initialPrompt) conversation.initialPrompt = initialPrompt
 
   conversation.updatedAt = new Date();
 

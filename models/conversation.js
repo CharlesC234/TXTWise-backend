@@ -4,7 +4,7 @@ const ConversationSchema = new mongoose.Schema({
   user: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Many-to-many with Users
   name: { type: String, default: "" },
   llm: { type: String, enum: ['claude', 'chatgpt', 'gemini', 'grok', 'deepseek'], default: 'chatgpt' },
-  initialPromt: { type: String, default: "" },
+  initialPrompt: { type: String, default: "" },
   fromPhone: { type: String, default: "+12394743734" },
   messages: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Message' }], // Many-to-many with Messages
   createdAt: { type: Date, default: Date.now },
