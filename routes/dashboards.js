@@ -156,6 +156,7 @@ router.get(
       name: conv.name,
       phone: conv.fromPhone,
       history: conv.historyDisabled,
+      paused: conv.paused,
     }));
 
     res.status(200).json({
