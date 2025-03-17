@@ -135,7 +135,7 @@ router.post('/send', async function (req, res) {
           console.log("token" + token)
 
   
-          res.status(200).json({ message: 'Phone number verified successfully.'});
+          res.status(200).json({ message: 'Phone number verified successfully.', token: token});
         } catch (error) {
           console.error('Error verifying phone number:', error);
           res.status(500).json({ message: 'Internal server error' });
