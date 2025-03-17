@@ -14,21 +14,22 @@ const Conversation = require('../models/conversation');
 
 router.get('/validate', async (req, res) => {
   try {
-      const token = req.cookies.token; // Extract token from HTTP-only cookie
+      const cookieToken = req.cookies?.token;
+      const headerToken = req.headers.authorization?.split(' ')[1]; // 'Bearer tokenHere'
 
-      console.log(token);
+      const token = cookieToken || headerToken; // Prefer cookie, fallback to header
+
+      console.log("Token used:", token);
 
       if (!token) {
           return res.status(401).json({ message: 'Unauthorized: No token provided' });
       }
 
-      // Verify JWT
       jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
           if (err) {
               return res.status(401).json({ message: 'Unauthorized: Invalid token' });
           }
 
-          // Find user based on decoded phone number
           const user = await User.findOne({ phoneNumber: decoded.id });
           if (!user) {
               return res.status(401).json({ message: 'Unauthorized: User not found' });
@@ -41,6 +42,7 @@ router.get('/validate', async (req, res) => {
       res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
 
 
 
