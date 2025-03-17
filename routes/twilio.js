@@ -35,13 +35,20 @@ router.post('/webhook', async (req, res) => {
     }
 
     // Check if the user has any active conversations
-    let conversation = await Conversation.findOne({ user: user._id }).sort({ updatedAt: -1 });
+    const conversation = await Conversation.findOne({ 
+        user: user._id,
+        phone: to  // Make sure this matches the field name for SignalWire number in your Conversation schema
+    }).sort({ updatedAt: -1 });
 
     if (!conversation) {
-        console.log(`No active conversations for ${from}.`);
-        await sendSms("You do not have any active conversations. Please log into your account at https://txtwise.io/login and initialize a conversation to use this service.", to, from);
-        return res.status(200).send('<Response></Response>'); // Stop further processing
-    }
+        console.log(`No conversation found for user ${user.phoneNumber} with phone ${to}.`);
+        await sendSms(
+            "No conversation found with this number. Please log in at https://txtwise.io/login and create a new chat.",
+            to,
+            from
+        );
+    return res.status(200).send('<Response></Response>');
+}
 
     if(conversation.paused){
         return res.status(200).send('<Response></Response>'); // Stop further processing
