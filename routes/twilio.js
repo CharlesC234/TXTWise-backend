@@ -37,7 +37,7 @@ router.post('/webhook', async (req, res) => {
     // Check if the user has any active conversations
     const conversation = await Conversation.findOne({ 
         user: user._id,
-        phone: to  // Make sure this matches the field name for SignalWire number in your Conversation schema
+        fromPhone: to  // Make sure this matches the field name for SignalWire number in your Conversation schema
     }).sort({ updatedAt: -1 });
 
     if (!conversation) {
