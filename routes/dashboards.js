@@ -18,40 +18,11 @@ const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, ne
 
 router.get('/token-usage', verifyToken, async (req, res) => {
     try {
-      const phoneNumber = req.userId; // Assuming req.userId holds phoneNumber from middleware
-  
+      const phoneNumber = req.userId; // From verifyToken
       const user = await User.findOne({ phoneNumber });
       if (!user) return res.status(404).json({ error: 'User not found' });
   
       const timeframe = req.query.timeframe || 'week';
-  
-      let startDate = new Date();
-      startDate.setSeconds(0, 0); // Normalize seconds/millis
-  
-      switch (timeframe) {
-        case 'month':
-          startDate.setDate(1);
-          startDate.setHours(0, 0, 0, 0);
-          break;
-        case 'year':
-          startDate.setMonth(0, 1);
-          startDate.setHours(0, 0, 0, 0);
-          break;
-        case 'today':
-          startDate.setHours(0, 0, 0, 0);
-          break;
-        case 'week':
-        default:
-          startDate.setDate(startDate.getDate() - 6);
-          startDate.setHours(0, 0, 0, 0);
-          break;
-      }
-  
-      const usageRecords = await TokenUsage.find({
-        user: user._id,
-        date: { $gte: startDate }
-      }).lean();
-  
       const usageByModel = {
         chatgpt: [],
         claude: [],
@@ -63,31 +34,62 @@ router.get('/token-usage', verifyToken, async (req, res) => {
       let categories = [];
   
       if (timeframe === 'today') {
-        // Hourly breakdown (0-23)
-        for (let hour = 0; hour < 24; hour++) {
-          const label = `${hour}:00`;
-          categories.push(label);
+        // Handle hourly breakdown for past 24 hours ending at current hour
+        const now = new Date();
+        now.setMinutes(0, 0, 0); // Round to current hour
+        const startHour = new Date(now);
+        startHour.setHours(now.getHours() - 23); // Past 24 hours
+  
+        const usageRecords = await TokenUsage.find({
+          user: user._id,
+          date: { $gte: startHour }
+        }).lean();
+  
+        const hourlyRange = [];
+        const tempHour = new Date(startHour);
+        while (tempHour <= now) {
+          hourlyRange.push(new Date(tempHour));
+          tempHour.setHours(tempHour.getHours() + 1);
+        }
+  
+        hourlyRange.forEach(hour => {
+          const hourISO = hour.toISOString().slice(0, 13); // e.g., "2025-03-09T14"
+          categories.push(hour.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }));
   
           for (const model in usageByModel) {
-            const totalForHour = usageRecords
-              .filter(r => {
-                const recordDate = new Date(r.date);
-                return (
-                  r.model === model &&
-                  recordDate.getHours() === hour &&
-                  recordDate.toDateString() === new Date().toDateString()
-                );
-              })
-              .reduce((sum, r) => sum + r.tokensUsed, 0);
-  
-            usageByModel[model].push(totalForHour);
+            const record = usageRecords.find(r =>
+              r.model === model &&
+              r.date.toISOString().slice(0, 13) === hourISO
+            );
+            usageByModel[model].push(record ? record.tokensUsed : 0);
           }
-        }
+        });
+  
       } else {
-        // Daily breakdown
+        // Handle daily breakdown for week/month/year
+        let startDate = new Date();
+        startDate.setHours(0, 0, 0, 0); // Start of day
+  
+        switch (timeframe) {
+          case 'month':
+            startDate.setDate(1);
+            break;
+          case 'year':
+            startDate.setMonth(0, 1);
+            break;
+          case 'week':
+          default:
+            startDate.setDate(startDate.getDate() - 6);
+            break;
+        }
+  
+        const usageRecords = await TokenUsage.find({
+          user: user._id,
+          date: { $gte: startDate }
+        }).lean();
+  
         const tempDate = new Date(startDate);
         const today = new Date();
-  
         while (tempDate <= today) {
           const formattedDate = tempDate.toISOString().slice(0, 10);
           categories.push(tempDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
@@ -117,6 +119,7 @@ router.get('/token-usage', verifyToken, async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
     }
   });
+  
   
 
   
