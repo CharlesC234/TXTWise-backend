@@ -18,9 +18,9 @@ mongoose.connect(process.env.MONGODB, { useNewUrlParser: true, useUnifiedTopolog
     // ✅ Start the token reset cron job AFTER DB connects
     cron.schedule('0 0 * * *', async () => {
       try {
-        console.log("🔄 Resetting all users' tokens to 25,000...");
+        console.log("🔄 Resetting all users' tokens to 7500...");
 
-        const result = await User.updateMany({}, { dailyTokensRemaining: 25000 });
+        const result = await User.updateMany({}, { dailyTokensRemaining: 7500 });
 
         console.log(`✅ Token reset complete for ${result.modifiedCount} users.`);
       } catch (err) {

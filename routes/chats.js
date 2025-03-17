@@ -9,6 +9,15 @@ const { verifyToken } = require('../functions/verifyToken');
 const sendSms = require('../functions/sendSMS');
 
 
+const CONVERSATION_NUMBERS = [
+    process.env.SIGNALWIRE_PHONE_NUMBER,
+    process.env.SIGNALWIRE_PHONE_NUMBER_2,
+    process.env.SIGNALWIRE_PHONE_NUMBER_3,
+    process.env.SIGNALWIRE_PHONE_NUMBER_4,
+    process.env.SIGNALWIRE_PHONE_NUMBER_5,
+  ];
+
+
 /**
  * GET conversation by ID (including messages and users)
  */
@@ -228,5 +237,61 @@ router.put('/:id', verifyToken, async function (req, res){
 
   res.status(200).json({ message: 'Conversation updated', updatedConversation });
 });
+
+
+
+// GET /api/conversation/available-number
+router.get('/available-number', verifyToken, async (req, res) => {
+    try {
+      const phoneNumber = req.userId; // Assuming req.userId = phoneNumber from middleware
+  
+      const user = await User.findOne({ phoneNumber });
+      if (!user) return res.status(404).json({ error: 'User not found' });
+  
+      const userConversations = await Conversation.find({ user: user._id });
+      const userConvoCount = userConversations.length;
+  
+      // Enforce conversation limits
+      const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
+      if (userConvoCount >= maxConvosAllowed) {
+        return res.status(403).json({ error: 'Conversation limit reached for your subscription level.' });
+      }
+  
+      // Build map of phone numbers and their total conversation count
+      const conversationCounts = await Conversation.aggregate([
+        { $match: { fromPhone: { $in: CONVERSATION_NUMBERS } } },
+        { $group: { _id: "$fromPhone", count: { $sum: 1 } } }
+      ]);
+  
+      const phoneUsageMap = {};
+      CONVERSATION_NUMBERS.forEach(num => {
+        phoneUsageMap[num] = 0; // Initialize to 0
+      });
+  
+      conversationCounts.forEach(entry => {
+        phoneUsageMap[entry._id] = entry.count;
+      });
+  
+      // Get the phone numbers the user already has conversations with
+      const userPhoneNumbers = new Set(userConversations.map(convo => convo.fromPhone));
+  
+      // Sort phone numbers by least usage, excluding ones the user already has
+      const sortedAvailableNumbers = CONVERSATION_NUMBERS
+        .filter(num => !userPhoneNumbers.has(num))
+        .sort((a, b) => phoneUsageMap[a] - phoneUsageMap[b]);
+  
+      if (sortedAvailableNumbers.length === 0) {
+        return res.status(409).json({ error: 'No available phone numbers for new conversation.' });
+      }
+  
+      const selectedPhoneNumber = sortedAvailableNumbers[0];
+      return res.json({ phoneNumber: selectedPhoneNumber });
+  
+    } catch (err) {
+      console.error('Error selecting conversation phone number:', err);
+      res.status(500).json({ error: 'Internal server error.' });
+    }
+  });
+
 
 module.exports = router;

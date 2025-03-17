@@ -48,7 +48,7 @@ router.post('/webhook', async (req, res) => {
     // Handle **Special Keywords** for user account info
     switch (messageNonCase) {
         case "STATUS":
-            const statusMessage = `You are currently using TXTWise.\n\n Your Subscription: ${user.subscriptionStatus.toUpperCase()}\n Tokens Remaining: ${user.dailyTokensRemaining} / 25,000 (Daily)\n Current AI Model: ${conversation.llm.toUpperCase()}\n\nManage your account at: txtwise(io)`;
+            const statusMessage = `You are currently using TXTWise.\n\n Your Subscription: ${user.subscriptionStatus.toUpperCase()}\n Tokens Remaining: ${user.dailyTokensRemaining} / 7,500 (Daily)\n Current AI Model: ${conversation.llm.toUpperCase()}\n\nManage your account at: txtwise(io)`;
             await sendSms(statusMessage, to, from);
             return res.status(200).send('<Response></Response>');
 
@@ -68,7 +68,7 @@ router.post('/webhook', async (req, res) => {
             return res.status(200).send('<Response></Response>');
 
         case "TOKENS":
-            const tokensMessage = `You have ${user.dailyTokensRemaining} out of 25,000 tokens remaining today.\n\nTo upgrade to unlimited tokens, subscribe at: txtwise(io) and log in with your phone number.`;
+            const tokensMessage = `You have ${user.dailyTokensRemaining} out of 7,500 tokens remaining today.\n\nTo upgrade to unlimited tokens, subscribe at: txtwise(io) and log in with your phone number.`;
             await sendSms(tokensMessage, to, from);
             return res.status(200).send('<Response></Response>');
     }
@@ -107,7 +107,7 @@ router.post('/webhook', async (req, res) => {
 
     if (user.subscriptionStatus === 'free' && user.dailyTokensRemaining <= 0) {
         await sendSms(
-            "Daily token limit reached, you have used all 25,000 tokens for today. Tokens reset to 25,000 at midnight, you can also upgrade to unlimited tokens for $5/month at txtwise.io/pricing.",
+            "Daily token limit reached, you have used all 7,500 tokens for today. Tokens reset to 7,500 at midnight, you can also upgrade to unlimited tokens for $5/month at txtwise.io/pricing.",
             to,
             from
         );

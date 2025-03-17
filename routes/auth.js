@@ -104,7 +104,7 @@ router.post(
               phoneNumber: phoneNumber,
               name: '',
               subscriptionStatus: 'free',
-              dailyTokensRemaining: 25000,
+              dailyTokensRemaining: 7500,
               conversations: [],
               messages: [],
               createdAt: new Date(),

@@ -50,7 +50,7 @@ const processQueue = async () => {
 
       // ❗ Check dailyTokensRemaining BEFORE sending to AI
       if (user.subscriptionStatus === 'free' && user.dailyTokensRemaining <= 0) {
-        const limitMsg = `Daily token limit reached, you have used all 25,000 tokens for today. Tokens reset to 25,000 at midnight, or upgrade to unlimited at txtwise.io/pricing.`;
+        const limitMsg = `Daily token limit reached, you have used all 7,500 tokens for today. Tokens reset to 7,500 at midnight, or upgrade to unlimited at txtwise.io/pricing.`;
         await sendSms(limitMsg, job.to, job.from);
         job.status = 'completed';
         await job.save();
