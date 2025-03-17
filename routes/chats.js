@@ -311,9 +311,7 @@ router.put('/:id', verifyToken, findUserConversation, async function (req, res) 
     if (typeof historyDisabled === 'boolean') {
       if (user.subscriptionStatus === 'premium') {
         conversation.historyDisabled = historyDisabled;
-      } else {
-        return res.status(403).json({ message: 'History disabling is a premium feature. Please upgrade.' });
-      }
+      } 
     }
   
     conversation.updatedAt = new Date();
