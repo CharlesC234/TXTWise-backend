@@ -26,21 +26,24 @@ router.get('/token-usage', verifyToken, async (req, res) => {
       const timeframe = req.query.timeframe || 'week';
   
       let startDate = new Date();
-      startDate.setHours(0, 0, 0, 0); // Normalize to start of day
+      startDate.setSeconds(0, 0); // Normalize seconds/millis
   
       switch (timeframe) {
         case 'month':
           startDate.setDate(1);
+          startDate.setHours(0, 0, 0, 0);
           break;
         case 'year':
           startDate.setMonth(0, 1);
+          startDate.setHours(0, 0, 0, 0);
           break;
-        case 'all':
-          startDate = new Date(0); // Epoch time
+        case 'today':
+          startDate.setHours(0, 0, 0, 0);
           break;
         case 'week':
         default:
           startDate.setDate(startDate.getDate() - 6);
+          startDate.setHours(0, 0, 0, 0);
           break;
       }
   
@@ -48,14 +51,6 @@ router.get('/token-usage', verifyToken, async (req, res) => {
         user: user._id,
         date: { $gte: startDate }
       }).lean();
-  
-      // Generate date range
-      const daysRange = [];
-      const tempDate = new Date(startDate);
-      while (tempDate <= new Date()) {
-        daysRange.push(new Date(tempDate));
-        tempDate.setDate(tempDate.getDate() + 1);
-      }
   
       const usageByModel = {
         chatgpt: [],
@@ -65,18 +60,52 @@ router.get('/token-usage', verifyToken, async (req, res) => {
         gemini: [],
       };
   
-      daysRange.forEach(date => {
-        const formattedDate = date.toISOString().slice(0, 10);
-        for (const model in usageByModel) {
-          const record = usageRecords.find(r =>
-            r.model === model && r.date.toISOString().slice(0, 10) === formattedDate
-          );
-          usageByModel[model].push(record ? record.tokensUsed : 0);
+      let categories = [];
+  
+      if (timeframe === 'today') {
+        // Hourly breakdown (0-23)
+        for (let hour = 0; hour < 24; hour++) {
+          const label = `${hour}:00`;
+          categories.push(label);
+  
+          for (const model in usageByModel) {
+            const totalForHour = usageRecords
+              .filter(r => {
+                const recordDate = new Date(r.date);
+                return (
+                  r.model === model &&
+                  recordDate.getHours() === hour &&
+                  recordDate.toDateString() === new Date().toDateString()
+                );
+              })
+              .reduce((sum, r) => sum + r.tokensUsed, 0);
+  
+            usageByModel[model].push(totalForHour);
+          }
         }
-      });
+      } else {
+        // Daily breakdown
+        const tempDate = new Date(startDate);
+        const today = new Date();
+  
+        while (tempDate <= today) {
+          const formattedDate = tempDate.toISOString().slice(0, 10);
+          categories.push(tempDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+  
+          for (const model in usageByModel) {
+            const record = usageRecords.find(r =>
+              r.model === model &&
+              r.date.toISOString().slice(0, 10) === formattedDate
+            );
+            usageByModel[model].push(record ? record.tokensUsed : 0);
+          }
+  
+          tempDate.setDate(tempDate.getDate() + 1);
+        }
+      }
   
       res.json({
-        categories: daysRange.map(d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+        categories,
         series: Object.keys(usageByModel).map(model => ({
           name: model.charAt(0).toUpperCase() + model.slice(1),
           data: usageByModel[model]
@@ -88,6 +117,7 @@ router.get('/token-usage', verifyToken, async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
     }
   });
+  
 
   
 
