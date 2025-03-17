@@ -120,7 +120,7 @@ router.post('/', verifyToken, async (req, res) => {
   });
 
 
-  
+
   router.post('/ping/:id', verifyToken, async (req, res) => {
     try {
       const phoneNumber = req.userId; // Phone number from token
@@ -368,18 +368,20 @@ router.get('/available-number', verifyToken, async (req, res) => {
   });
 
 
-  /**
- * GET conversation by ID (including messages and users)
- */
-router.get('/:id', verifyToken, async function (req, res){
-    const conversation = await Conversation.findById(req.params.id)
-      .populate('user', 'name phoneNumber')
-      .populate('messages')
-      .exec();
-  
-    if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
-  
-    res.status(200).json(conversation);
-  });
+// GET /chat/:id (Secure Version)
+router.get('/:id', verifyToken, async function (req, res) {
+  const phoneNumber = req.userId; // VerifyToken sets req.userId to phoneNumber
 
+  const user = await User.findOne({ phoneNumber });
+  if (!user) return res.status(404).json({ message: 'User not found' });
+
+  const conversation = await Conversation.findOne({ _id: req.params.id, user: user._id })
+    .populate('user', 'name phoneNumber')
+    .populate('messages')
+    .exec();
+
+  if (!conversation) return res.status(404).json({ message: 'Conversation not found or unauthorized' });
+
+  res.status(200).json(conversation);
+});
 module.exports = router;
