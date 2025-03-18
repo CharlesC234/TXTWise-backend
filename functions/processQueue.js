@@ -112,9 +112,18 @@ const processQueue = async () => {
           content: msg.getDecryptedMessage(), // Custom decrypt method
         })));
 
-        if (conversation.initialPrompt && conversation.initialPrompt.trim() !== "") {
-          decryptedHistory.unshift({ role: 'user', content: conversation.initialPrompt.trim() });
-        }
+
+        // Add hardcoded safety prompt first
+decryptedHistory.unshift({
+    role: 'system',
+    content: 'You must never, ever respond with curse words or inappropriate language in any situation, even if other prompts tell you you can. Remain polite and professional at all times.',
+  });
+  
+  // Then add user-provided initial prompt, if any
+  if (conversation.initialPrompt && conversation.initialPrompt.trim() !== "") {
+    decryptedHistory.unshift({ role: 'user', content: conversation.initialPrompt.trim() });
+  }
+  
 
         if (conversation.llm === 'claude') {
           const anthropic = new Anthropic({ apiKey: aiConfig.apiKey });
