@@ -73,10 +73,10 @@ router.post('/', verifyToken, async (req, res) => {
       const userConvoCount = existingConversations.length;
   
 
-      const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
-      if (userConvoCount >= maxConvosAllowed) {
-        return res.status(403).json({ error: `Conversation limit reached. Max allowed: ${maxConvosAllowed}` });
-      }
+    //   const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
+    //   if (userConvoCount >= maxConvosAllowed) {
+    //     return res.status(403).json({ error: `Conversation limit reached. Max allowed: ${maxConvosAllowed}` });
+    //   }
   
 
       const conversation = new Conversation({
