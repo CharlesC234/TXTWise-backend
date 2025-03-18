@@ -400,14 +400,12 @@ router.get('/available-number', verifyToken, async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
   
     const conversation = await Conversation.findOne({ _id: req.params.id, user: user._id })
-      .populate('user', 'name phoneNumber')
-      .populate('messages') 
-      .lean();
+    .populate('user', 'name phoneNumber')
+    .populate('messages'); // Removed .lean()
   
-    if (!conversation) return res.status(404).json({ message: 'Conversation not found or unauthorized' });
+  if (!conversation) return res.status(404).json({ message: 'Conversation not found or unauthorized' });
   
-    // messages are already decrypted, no need to map/decrypt again
-    res.status(200).json(conversation);
+  res.status(200).json(conversation); // toJSON triggers decryption
   });
   
 
