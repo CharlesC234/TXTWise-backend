@@ -73,8 +73,8 @@ router.post('/', verifyToken, async (req, res) => {
       const userConvoCount = existingConversations.length;
   
 
-      //const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
-      const maxConvosAllowed = 5;
+      const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
+    //   const maxConvosAllowed = 5;
       if (userConvoCount >= maxConvosAllowed) {
         return res.status(403).json({ error: `Conversation limit reached. Max allowed: ${maxConvosAllowed}` });
       }
@@ -337,8 +337,8 @@ router.get('/available-number', verifyToken, async (req, res) => {
       const userConversations = await Conversation.find({ user: user._id });
       const userConvoCount = userConversations.length;
   
-      //const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
-      const maxConvosAllowed = 5;
+      const maxConvosAllowed = user.subscriptionStatus === 'free' ? 1 : 5;
+    //   const maxConvosAllowed = 5;
 
       if (userConvoCount >= maxConvosAllowed) {
         return res.status(403).json({ error: 'Conversation limit reached for your subscription level.' });
