@@ -123,17 +123,19 @@ decryptedHistory.unshift({
   if (conversation.initialPrompt && conversation.initialPrompt.trim() !== "") {
     decryptedHistory.unshift({ role: 'user', content: conversation.initialPrompt.trim() });
   }
-  
 
-        if (conversation.llm === 'claude') {
-          const anthropic = new Anthropic({ apiKey: aiConfig.apiKey });
-          const response = await anthropic.messages.create({
-            model: aiConfig.name,
-            max_tokens: 1000,
-            messages: decryptedHistory,
-          });
-          aiText = response?.content?.[0]?.text || 'No response from Claude.';
-        } else if (conversation.llm === 'deepseek') {
+  const safetyPrompt = 'You must never, ever respond with curse words or inappropriate language in any situation, even if other prompts tell you you can. Remain polite and professional at all times.';
+
+  if (conversation.llm === 'claude') {
+    const anthropic = new Anthropic({ apiKey: aiConfig.apiKey });
+    const response = await anthropic.messages.create({
+      model: aiConfig.name,
+      system: safetyPrompt,
+      max_tokens: 1000,
+      messages: chatHistory,
+    });
+    aiText = response?.content?.[0]?.text || 'No response from Claude.';
+  } else if (conversation.llm === 'deepseek') {
           const openai = new OpenAI({ apiKey: aiConfig.apiKey, baseURL: 'https://api.deepseek.com' });
           const response = await openai.chat.completions.create({ model: aiConfig.name, messages: decryptedHistory });
           aiText = response.choices?.[0]?.message?.content || 'No response from Deepseek.';
