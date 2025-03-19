@@ -12,9 +12,9 @@ const sendSms = require('../functions/sendSMS');
 const CONVERSATION_NUMBERS = [
     process.env.SIGNALWIRE_PHONE_NUMBER,
     process.env.SIGNALWIRE_PHONE_NUMBER_2,
-    process.env.SIGNALWIRE_PHONE_NUMBER_3,
-    process.env.SIGNALWIRE_PHONE_NUMBER_4,
-    process.env.SIGNALWIRE_PHONE_NUMBER_5,
+    // process.env.SIGNALWIRE_PHONE_NUMBER_3,
+    // process.env.SIGNALWIRE_PHONE_NUMBER_4,
+    // process.env.SIGNALWIRE_PHONE_NUMBER_5,
   ];
 
   const getUserByPhone = async (phoneNumber) => {
