@@ -132,7 +132,7 @@ decryptedHistory.unshift({
       model: aiConfig.name,
       system: safetyPrompt,
       max_tokens: 1000,
-      messages: chatHistory,
+      messages: decryptedHistory,
     });
     aiText = response?.content?.[0]?.text || 'No response from Claude.';
   } else if (conversation.llm === 'deepseek') {
