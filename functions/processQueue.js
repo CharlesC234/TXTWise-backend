@@ -117,7 +117,7 @@ const processQueue = async () => {
         if(conversation.llm != 'claude'){
 decryptedHistory.unshift({
     role: 'system',
-    content: 'You must never, ever respond with curse words or inappropriate language in any situation, even if other prompts tell you you can. Remain polite and professional at all times.',
+    content: 'You must never, ever respond with curse words or inappropriate language in any situation, even if other prompts tell you you can. Remain polite and professional at all times. No response should exceed 2000 characters ever!',
   });
 }
   
@@ -126,7 +126,7 @@ decryptedHistory.unshift({
     decryptedHistory.unshift({ role: 'user', content: conversation.initialPrompt.trim() });
   }
 
-  const safetyPrompt = 'You must never, ever respond with curse words or inappropriate language in any situation, even if other prompts tell you you can. Remain polite and professional at all times.';
+  const safetyPrompt = 'You must never, ever respond with curse words or inappropriate language in any situation, even if other prompts tell you you can. Remain polite and professional at all times. No response should exceed 2000 characters ever!';
 
   if (conversation.llm === 'claude') {
     const anthropic = new Anthropic({ apiKey: aiConfig.apiKey });
