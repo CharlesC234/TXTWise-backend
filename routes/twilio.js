@@ -17,6 +17,7 @@ router.use(bodyParser.urlencoded({ extended: false }));
 const AI_KEYWORDS = ["CHATGPT", "GROK", "GEMINI", "CLAUDE", "DEEPSEEK"];
 
 router.post('/webhook', async (req, res) => {
+    console.log(`webhook called: ${req.body.From} to ${req.body.To}: ${req.body.Body}`);
     const from = req.body.From;
     const to = req.body.To;
     let incomingMessage = req.body.Body.trim().toUpperCase();
