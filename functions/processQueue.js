@@ -142,6 +142,8 @@ decryptedHistory.unshift({
           const openai = new OpenAI({ apiKey: aiConfig.apiKey, baseURL: 'https://api.deepseek.com' });
           const response = await openai.chat.completions.create({ model: aiConfig.name, messages: decryptedHistory });
           aiText = response.choices?.[0]?.message?.content || 'No response from Deepseek.';
+          console.log("DeepSeek raw response:", JSON.stringify(response, null, 2));
+
           console.log("deepseek sent");
         } else if (conversation.llm === 'gemini') {
           const genAI = new GoogleGenerativeAI(aiConfig.apiKey);
