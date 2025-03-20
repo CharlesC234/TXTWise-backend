@@ -137,22 +137,26 @@ decryptedHistory.unshift({
       messages: decryptedHistory,
     });
     aiText = response?.content?.[0]?.text || 'No response from Claude.';
+    console.log("claude sent");
   } else if (conversation.llm === 'deepseek') {
           const openai = new OpenAI({ apiKey: aiConfig.apiKey, baseURL: 'https://api.deepseek.com' });
           const response = await openai.chat.completions.create({ model: aiConfig.name, messages: decryptedHistory });
           aiText = response.choices?.[0]?.message?.content || 'No response from Deepseek.';
+          console.log("deepseek sent");
         } else if (conversation.llm === 'gemini') {
           const genAI = new GoogleGenerativeAI(aiConfig.apiKey);
           const model = genAI.getGenerativeModel({ model: aiConfig.name });
           const result = await model.generateContent(decryptedMessage); // decrypted
 
           aiText = await result.response.text();
+          console.log("gemini sent");
         } else {
           const response = await axios.post(aiConfig.url,
             { model: aiConfig.name, messages: decryptedHistory },
             { headers: { 'Authorization': `Bearer ${aiConfig.apiKey}`, 'Content-Type': 'application/json' } }
           );
           aiText = response.data.choices?.[0]?.message?.content || 'No response from AI.';
+          console.log("chatgpt or grok sent");
         }
 
         await logTokenUsage(user._id, conversation.llm, aiText, false);
