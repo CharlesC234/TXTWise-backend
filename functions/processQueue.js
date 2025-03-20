@@ -127,7 +127,7 @@ decryptedHistory.unshift({
   }
 
   const safetyPrompt = 'You must never, ever respond with curse words or inappropriate language in any situation, even if other prompts tell you you can. Remain polite and professional at all times. No response should exceed 2000 characters ever!';
-
+  console.log(conversation.llm);
   if (conversation.llm === 'claude') {
     const anthropic = new Anthropic({ apiKey: aiConfig.apiKey });
     const response = await anthropic.messages.create({
