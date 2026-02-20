@@ -16,11 +16,11 @@ const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
 let isProcessing = false;
 
 const AI_MAP = {
-  claude: { name: 'claude-3-opus-20240229', apiKey: process.env.CLAUDE_API_KEY },
+  claude: { name: 'claude-sonnet-4-6', apiKey: process.env.CLAUDE_API_KEY },
   chatgpt: { name: 'gpt-4o', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
   deepseek: { name: 'deepseek-chat', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1/chat/completions' },
-  gemini: { name: 'gemini-1.5-pro-latest', apiKey: process.env.GEMINI_API_KEY },
-  grok: { name: 'grok-2-latest', apiKey: process.env.GROK_API_KEY, url: 'https://api.x.ai/v1/chat/completions' },
+  gemini: { name: 'gemini-1.5-pro', apiKey: process.env.GEMINI_API_KEY },
+  grok: { name: 'grok-4-1-fast-non-reasoning', apiKey: process.env.GROK_API_KEY, url: 'https://api.x.ai/v1/chat/completions' },
 };
 
 const imageKeywords = [
