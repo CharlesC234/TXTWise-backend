@@ -19,7 +19,7 @@ const AI_MAP = {
   claude: { name: 'claude-sonnet-4-6', apiKey: process.env.CLAUDE_API_KEY },
   chatgpt: { name: 'gpt-4o', apiKey: process.env.CHATGPT_API_KEY, url: 'https://api.openai.com/v1/chat/completions' },
   deepseek: { name: 'deepseek-chat', apiKey: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/v1/chat/completions' },
-  gemini: { name: 'gemini-1.5-pro', apiKey: process.env.GEMINI_API_KEY },
+  gemini: { name: 'gemini-2.0-flash', apiKey: process.env.GEMINI_API_KEY },
   grok: { name: 'grok-4-1-fast-non-reasoning', apiKey: process.env.GROK_API_KEY, url: 'https://api.x.ai/v1/chat/completions' },
 };
 
@@ -147,10 +147,25 @@ decryptedHistory.unshift({
           console.log("deepseek sent");
         } else if (conversation.llm === 'gemini') {
           const genAI = new GoogleGenerativeAI(aiConfig.apiKey);
-          const model = genAI.getGenerativeModel({ model: aiConfig.name });
-          const result = await model.generateContent(decryptedMessage); // decrypted
-
-          aiText = await result.response.text();
+          const model = genAI.getGenerativeModel({
+            model: aiConfig.name,
+            systemInstruction: safetyPrompt,
+          });
+          const geminiHistory = decryptedHistory
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .slice(0, -1)
+            .map(m => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content || '' }],
+            }));
+          const chat = model.startChat({ history: geminiHistory });
+          const result = await chat.sendMessage(decryptedMessage);
+          const response = result.response;
+          if (!response || !response.text) {
+            aiText = 'No response from Gemini.';
+          } else {
+            aiText = response.text();
+          }
           console.log("gemini sent");
         } else {
           const response = await axios.post(aiConfig.url,
@@ -180,8 +195,12 @@ decryptedHistory.unshift({
       job.status = 'completed';
       await job.save();
     } catch (error) {
-      console.error('Error processing message:', error);
-      await sendSms(error, job.to, job.from);
+      const errMsg = error?.message ?? String(error);
+      console.error('Error processing message:', errMsg, error);
+      const userMessage = errMsg.toLowerCase().includes('temporarily unavailable') || errMsg.toLowerCase().includes('model')
+        ? "Our AI service is busy. Please try again in a moment."
+        : "Something went wrong. Please try again in a moment.";
+      await sendSms(userMessage, job.to, job.from);
       job.status = 'failed';
       await job.save();
     }
